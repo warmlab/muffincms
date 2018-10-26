@@ -105,27 +105,46 @@ class OrderResource(BaseResource):
         parser.add_argument('delivery_way', type=int, required=True, help='delivery way must be required')
         parser.add_argument('address', type=int, required=True, help='address must be required')
 
+        parser.add_argument('nickname', type=str)
+        parser.add_argument('avatarUrl', type=str)
         parser.add_argument('note', type=str)
 
         data = parser.parse_args()
 
-        promotion = Promotion.query.get_or_404(data['promotion_id'])
-        order = Order()
-        order.code = datetime.now().strftime('%Y%m%d%%04d%H%M%S%f') % shop.id
-
-        order.promotion_id = promotion.id
-
         # customer info
         mo = MemberOpenid.query.filter_by(access_token=data['X-ACCESS-TOKEN']).first_or_404()
+        mo.nickname = data['nickname']
+        mo.avatarUrl = data['avatarUrl']
         logger.debug('put order user: %s', mo)
+
+        promotion = Promotion.query.get_or_404(data['promotion_id'])
+        order = Order.query.filter_by(promotion_id=promotion.id, openid=mo.openid, payment_code=None, pay_time=None).first()
+        if not order:
+            order = Order()
+            order.promotion_id = promotion.id
+            order.openid = mo.openid
+            order.member_openid = mo
+        else:
+            # delete order address and order products
+            OrderAddress.query.filter_by(order_code=order.code).delete()
+            #db.session.delete(order.address)
+            for p in order.products:
+                db.session.delete(p) 
+            order.address = None
+            db.session.commit()
+
+        order.products = []
+        order.code = datetime.now().strftime('%Y%m%d%%04d%H%M%S%f') % shop.id
+        order.prepay_id=None
         #if data['payment'] == 2:
         #    mo.name = data['member_name']
         #    mo.phone = data['member_phone']
-        order.member_openid = mo
-        order.openid = mo.openid
+        #order.member_openid = mo
+        #order.openid = mo.openid
         #order.payment = data['payment']
         order.mode = 0
         order.valuecard_allowed = promotion.valuecard_allowed
+        order.note = data['note']
         order.shoppoint_id = shop.id
         order.shoppoint = shop
 
@@ -133,7 +152,6 @@ class OrderResource(BaseResource):
         order.original_cost = 0
         order.cost = 0
         order.delivery_fee = 0 if data['delivery_way'] == 1 else promotion.delivery_fee
-        order.products = []
         for p in data['products']: # TODO if the products code in data['products'] are duplicated, a db error will be occurred
             product = Product.query.get(p['product']['id']) # filter_by(code=p['code']).first_or_404()
             logger.debug('the product in order: %s', product)

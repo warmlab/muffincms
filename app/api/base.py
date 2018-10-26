@@ -15,7 +15,7 @@ def authenticate(func):
         if not getattr(func, 'authenticated', True):
             return func(*args, **kwargs)
 
-        logger.debug('the function args: %s - %s', args, kwargs)
+        #logger.debug('the function args: %s - %s', args, kwargs)
         #shop = Shoppoint.query.filter_by(code=kwargs['shopcode']).first_or_404()
         #acct = basic_authentication()  # custom account lookup function
         parser = RequestParser()

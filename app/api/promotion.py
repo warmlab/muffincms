@@ -15,6 +15,7 @@ from ..models import Product, Shoppoint, PickupAddress
 
 from .product import product_fields
 from .address import address_fields
+from .order import order_fields
 from .base import BaseResource
 from .field import DateTimeField
 
@@ -45,7 +46,8 @@ promotion_fields = {
     'note': fields.String,
 
     'products': fields.List(fields.Nested(promotion_product_fields)),
-    'addresses': fields.List(fields.Nested(promotion_address_fields))
+    'addresses': fields.List(fields.Nested(promotion_address_fields)),
+    'orders': fields.List(fields.Nested(order_fields))
 }
 
 class PromotionResource(BaseResource):
@@ -198,6 +200,6 @@ class PromotionsResource(BaseResource):
     @marshal_with(promotion_fields)
     def get(self, shopcode):
         shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
-        promotions = Promotion.query.filter_by(shoppoint_id=shop.id, is_deleted=False).order_by(Promotion.last_order_time.desc()).all()
+        promotions = Promotion.query.filter(Promotion.shoppoint_id==shop.id, Promotion.is_deleted==False, Promotion.to_time>datetime.now()).order_by(Promotion.last_order_time.desc()).all()
 
         return promotions

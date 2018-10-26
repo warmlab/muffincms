@@ -20,7 +20,7 @@ from .base import BaseResource
 
 address_fields = {
     'id': fields.Integer,
-    'name': fields.String,
+    'contact': fields.String,
     'phone': fields.String,
     'address': fields.String,
     'is_default': fields.Boolean
@@ -104,9 +104,11 @@ class TokenCheckerResource(BaseResource):
     def post(self, shopcode):
         parser = RequestParser()
         parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
+        parser.add_argument('X-PARTMENT', type=str, location='headers', required=True, help='partment code must be required')
         data = parser.parse_args()
 
         shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
+        partment = Partment.query.filter_by(shoppoint_id=shop.id, code=data['X-PARTMENT']).first_or_404()
         mo = MemberOpenid.query.filter_by(shoppoint_id=shop.id, access_token=data['X-ACCESS-TOKEN']).first()
         if not mo or not mo.verify_access_token(partment.secret_key):
             abort(405, status=STATUS_TOKEN_INVALID, message=MESSAGES[STATUS_TOKEN_INVALID])
@@ -168,7 +170,7 @@ class OpenidAddressResource(BaseResource):
         #parser.add_argument('openid', type=str, required=True, help='openid should be required')
         parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
         parser.add_argument('id', type=int)
-        parser.add_argument('name', type=str, required=True, help='contact name should be required')
+        parser.add_argument('contact', type=str, required=True, help='contact name should be required')
         parser.add_argument('phone', type=str, required=True, help='phone should be required')
         parser.add_argument('address', type=str, required=True, help='address should be required')
         parser.add_argument('is_default', type=bool, required=True, help='default setting should be required')
@@ -182,7 +184,7 @@ class OpenidAddressResource(BaseResource):
             address = MemberOpenidAddress.query.get_or_404(data['id'])
         else:
             address = MemberOpenidAddress()
-        address.name = data['name']
+        address.contact = data['contact']
         address.phone = data['phone']
         address.address = data['address']
         address.openid = mo.openid

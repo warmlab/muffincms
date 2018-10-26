@@ -70,7 +70,7 @@ class Partment(db.Model):
         if self.access_token and self.expires_time and self.expires_time > int(time()):
             return self.access_token
 
-        print ('Get token from weixin or cannot get access token')
+        print('Get token from weixin or cannot get access token', self.code)
 
         # get access token
         #params = urllib.parse.urlencode({'grant_type': 'client_credential', 'appid': app_id, 'secret': app_secret})
@@ -90,7 +90,7 @@ class Partment(db.Model):
             if 'errcode' in info or 'access_token' not in info or 'expires_in' not in info:
                 errcode = info.get('errcode')
                 errmsg = info.get('errmsg')
-                raise AccessTokenGotError(errcode, errmsg)
+                return ''
 
             self.access_token = info.get('access_token')
             self.expires_time = int(time()) + info.get('expires_in') - 10
@@ -229,7 +229,7 @@ class Promotion(db.Model):
     shoppoint = db.relationship('Shoppoint', backref=db.backref('promotions', lazy="dynamic"))
 
     products = db.relationship('PromotionProduct', back_populates="promotion")
-    orders = db.relationship('Order', back_populates='promotion')
+    orders = db.relationship('Order', back_populates='promotion', order_by="desc(Order.index)")
     addresses = db.relationship('PromotionAddress', back_populates='promotion')
 
 
@@ -340,7 +340,7 @@ class Order(db.Model):
                          backref=db.backref('orders', lazy="dynamic"))
 
     def next_index(self):
-        next_index = db.session.query(db.func.max(Order.index)).scalar()
+        next_index = db.session.query(db.func.max(Order.index)).filter_by(promotion_id=self.promotion_id).scalar()
         if next_index:
             next_index += 1
         else:

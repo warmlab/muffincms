@@ -25,6 +25,9 @@ def create_app(config_name):
     from .payment import payment as payment_blueprint
     app.register_blueprint(payment_blueprint, url_prefix='/pay/<string:shopcode>')
 
+    from .weixin import weixin as weixin_blueprint
+    app.register_blueprint(weixin_blueprint, url_prefix='/weixin')
+
     # just for develop
     @app.route('/media/<path:filename>', methods=['GET'])
     def media(filename):
