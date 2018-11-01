@@ -33,7 +33,7 @@ def notify_admins(order, shoppoint_id):
                 "value": ' '.join(products)
                 },
             "keyword2":{
-                "value": '￥' + str(order.cost/100)
+                "value": '￥' + str((order.cost+order.delivery_fee)/100)
                 },
             "keyword3":{
                 "value": order.member_openid.nickname
@@ -51,7 +51,7 @@ def notify_admins(order, shoppoint_id):
             }
 
     for u in ('ox4bxso53hocK9iyC-eKNll-qRoI',
-            'ox4bxsnBj7xpsSndE4TOg_LY-IKQ', 'ox4bxsn8gkt_IqaVzQIPRkuep4v8'):
+            'ox4bxsnBj7xpsSndE4TOg_LY-IKQ', 'ox4bxsjScfpMhLESnt4AziP5ByuI'):
         j = {
             'template_id': 'pkl-0GTnDHxthXtR381PPNAooBT1JwUYuuP-YK1nRSA',
             'touser': u,
@@ -79,7 +79,7 @@ def notify_customer(order, partment, form_id):
             "value": ' '.join(["x".join([p.product.name, str(p.amount)]) for p in order.products]),
             },
         "keyword5":{
-            "value": "自提" if order.address.delivery_way==1 else "快递"
+            "value": "自提" if order.address.delivery_way==1 else "快递: 运费 ￥" + str(order.delivery_fee/100)
             },
         "keyword6":{
             "value": '-'.join([order.address.name, order.address.phone])

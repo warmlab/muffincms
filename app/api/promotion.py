@@ -51,6 +51,7 @@ promotion_fields = {
 }
 
 class PromotionResource(BaseResource):
+#class PromotionResource(Resource):
     @marshal_with(promotion_fields)
     def get(self, shopcode):
         parser = RequestParser()
