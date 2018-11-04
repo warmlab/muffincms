@@ -77,8 +77,8 @@ class PromotionResource(BaseResource):
         shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
         #request.get_json(force=True)
         parser = RequestParser()
-        parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
-        parser.add_argument('X-VERSION', type=str, location='headers')
+        #parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
+        #parser.add_argument('X-VERSION', type=str, location='headers')
         parser.add_argument('id', type=int)
         parser.add_argument('name', type=str)
         parser.add_argument('binding', type=bool)
@@ -152,7 +152,6 @@ class PromotionResource(BaseResource):
 
         #promotion.addresses = []
         to_delete_addresses = [pa.address_id for pa in promotion.addresses]
-        logger.debug('aaaaaaaaaaa %s', to_delete_addresses)
         for aid in data['addresses']:
             addr = PickupAddress.query.get_or_404(aid)
             pa = PromotionAddress.query.get((promotion.id, addr.id))

@@ -6,8 +6,6 @@ from flask import render_template, abort
 from flask import request, current_app, make_response, url_for
 from flask import json
 
-from flask_login import login_required, current_user
-
 from . import weixin
 from .. import db
 from .message import Message

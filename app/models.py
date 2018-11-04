@@ -120,7 +120,7 @@ class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     code = db.Column(db.String(32), nullable=False, unique=True, index=True)
     name = db.Column(db.String(128), unique=True, index=True)
-    english_name = db.Column(db.String(128), unique=True, index=True)
+    english_name = db.Column(db.String(128), index=True)
     pinyin = db.Column(db.String(128), unique=True, index=True)
     price = db.Column(db.Integer, default=9999.0) # 现价
     member_price = db.Column(db.Integer, default=9999.0) # 会员价

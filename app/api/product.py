@@ -75,7 +75,7 @@ class ProductResource(BaseResource):
         is_new_product = False
         shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
         parser = RequestParser()
-        parser.add_argument('code', type=str, required=True, help='product code should be required')
+        parser.add_argument('code', type=str)
         parser.add_argument('name', type=str, required=True, help='product name should be required')
         parser.add_argument('english_name', type=str)
         parser.add_argument('price', type=int, required=True, help='product price should be required')
@@ -95,7 +95,7 @@ class ProductResource(BaseResource):
         if not product:
             is_new_product = True
             product = Product()
-            product.code = data['code']
+            product.code = datetime.now().strftime('%Y%m%d%%H%M%S%f')
             db.session.add(product)
 
         product.name = data['name']
@@ -112,6 +112,7 @@ class ProductResource(BaseResource):
 
         logger.debug(data)
 
+        print(data['images'])
         for i in product.images:
             db.session.delete(i)
         product.images = []
