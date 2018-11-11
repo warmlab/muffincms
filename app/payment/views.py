@@ -45,7 +45,7 @@ def notify(shopcode, partcode):
         return "<xml><return_code><![CDATA[SUCCESS]]></return_code><return_msg><![CDATA[OK]]></return_msg></xml>", 201
 
     order.payment_code = message.get_value('transaction_id')
-    if int(order.cost) == int(message.get_value('cash_fee')):
+    if order.cost+order.delivery_fee == int(message.get_value('cash_fee')):
         order.pay_time = datetime.strptime(message.get_value('time_end'), '%Y%m%d%H%M%S')
         if order.promotion:
             order.commit_amount()
