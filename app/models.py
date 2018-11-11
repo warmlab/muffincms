@@ -353,6 +353,9 @@ class Order(db.Model):
 
     # 订单成功后，修改已售和库存
     def commit_amount(self):
+        if not self.promotion:
+            return
+
         for pp in self.promotion.products:
             for op in self.products:
                 if pp.product_id == op.product_id:
@@ -366,6 +369,9 @@ class Order(db.Model):
 
     # 订单取消后，恢复已售和库存
     def rollback_amount(self):
+        if not self.promotion:
+            return
+
         for pp in self.promotion.products:
             for op in self.products:
                 if pp.product_id == op.product_id:

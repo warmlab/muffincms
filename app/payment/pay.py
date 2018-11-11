@@ -83,7 +83,7 @@ def unified_order(order, appid, mch_id, key, openid, notify_url, device_info='WE
 
     data['out_trade_no'] = order.code
     print(order.products)
-    data['body'] = order.promotion.name if order.promotion.name else '小麦芬团购'
+    data['body'] = order.promotion.name if order.promotion and order.promotion.name else '小麦芬烘焙小店'
     data['detail'] = ' '.join([p.product.name + 'x' + str(p.amount) for p in order.products]) # 商品简单描述
     data['attach'] = '小麦芬烘焙课堂'
     data['total_fee'] = order.cost + order.delivery_fee

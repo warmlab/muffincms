@@ -117,21 +117,28 @@ class OrderResource(BaseResource):
         mo.avatarUrl = data['avatarUrl']
         logger.debug('put order user: %s', mo)
 
-        promotion = Promotion.query.get_or_404(data['promotion_id'])
-        order = Order.query.filter_by(promotion_id=promotion.id, openid=mo.openid, payment_code=None, pay_time=None).first()
-        if not order:
+        promotion = Promotion.query.get(data['promotion_id'])
+        if promotion:
+            order = Order.query.filter_by(promotion_id=promotion.id, openid=mo.openid, payment_code=None, pay_time=None).first()
+            if not order:
+                order = Order()
+                order.promotion_id = promotion.id
+                order.openid = mo.openid
+                order.member_openid = mo
+                db.session.add(order)
+            else:
+                # delete order address and order products
+                OrderAddress.query.filter_by(order_code=order.code).delete()
+                #db.session.delete(order.address)
+                for p in order.products:
+                    db.session.delete(p) 
+                order.address = None
+                db.session.commit()
+        else:
             order = Order()
-            order.promotion_id = promotion.id
             order.openid = mo.openid
             order.member_openid = mo
-        else:
-            # delete order address and order products
-            OrderAddress.query.filter_by(order_code=order.code).delete()
-            #db.session.delete(order.address)
-            for p in order.products:
-                db.session.delete(p) 
-            order.address = None
-            db.session.commit()
+            db.session.add(order)
 
         order.products = []
         order.code = datetime.now().strftime('%Y%m%d%%04d%H%M%S%f') % shop.id
@@ -143,7 +150,7 @@ class OrderResource(BaseResource):
         #order.openid = mo.openid
         #order.payment = data['payment']
         order.mode = 0
-        order.valuecard_allowed = promotion.valuecard_allowed
+        order.valuecard_allowed = True
         order.note = data['note']
         order.shoppoint_id = shop.id
         order.shoppoint = shop
@@ -151,16 +158,20 @@ class OrderResource(BaseResource):
         # product info
         order.original_cost = 0
         order.cost = 0
-        order.delivery_fee = 0 if data['delivery_way'] == 1 else promotion.delivery_fee
+        order.delivery_fee = 0 if data['delivery_way'] == 1 else 1000
         for p in data['products']: # TODO if the products code in data['products'] are duplicated, a db error will be occurred
             product = Product.query.get(p['product']['id']) # filter_by(code=p['code']).first_or_404()
             logger.debug('the product in order: %s', product)
-            pp = PromotionProduct.query.get_or_404((promotion.id, product.id))
-            logger.debug('the product in promotion: %s', pp)
             op = OrderProduct()
+            if promotion:
+                pp = PromotionProduct.query.get_or_404((promotion.id, product.id))
+                logger.debug('the product in promotion: %s', pp)
+                op.price = pp.price if pp.price else product.promote_price
+            else:
+                pp = None
+                op.price = product.price
             op.order = order
             op.product = product
-            op.price = pp.price if pp.price else product.promote_price
             op.amount = p['want_amount']
 
             #pp.sold += op.amount
