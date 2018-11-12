@@ -1,7 +1,7 @@
 from flask import Blueprint
 from flask_restful import Api
 
-from .promotion import PromotionResource, PromotionsResource
+from .promotion import PromotionResource, PromotionsResource, PromotionOrdersResource
 from .image import ImageResource
 from .product import ProductResource, ProductsResource
 from .order import OrderResource, OrdersResource
@@ -15,7 +15,9 @@ api_blueprint = Blueprint('api', __name__)
 api = Api(api_blueprint)
 
 api.add_resource(PromotionResource, '/promotion', endpoint='promotion_ep')
+api.add_resource(PromotionOrdersResource, '/promotion/orders')
 api.add_resource(PromotionsResource, '/promotions', endpoint='promotions_ep')
+
 api.add_resource(ImageResource, '/image')
 api.add_resource(CategoriesResource, '/categories')
 api.add_resource(ProductResource, '/product')

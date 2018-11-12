@@ -12,6 +12,7 @@ from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, MESSAGES
 from ..models import db
 from ..models import Promotion, PromotionProduct, PromotionAddress
 from ..models import Product, Shoppoint, PickupAddress
+from ..models import Order
 
 from .product import product_fields
 from .address import address_fields
@@ -47,7 +48,7 @@ promotion_fields = {
 
     'products': fields.List(fields.Nested(promotion_product_fields)),
     'addresses': fields.List(fields.Nested(promotion_address_fields)),
-    'orders': fields.List(fields.Nested(order_fields))
+    #'orders': fields.List(fields.Nested(order_fields)) # 参团数量多的话，直接影响页面加载速度
 }
 
 class PromotionResource(BaseResource):
@@ -164,7 +165,6 @@ class PromotionResource(BaseResource):
                 promotion.addresses.append(pa)
             if aid in to_delete_addresses:
                 to_delete_addresses.remove(aid)
-        logger.debug('aaaaaaaaaaa %s', to_delete_addresses)
         for aid in to_delete_addresses:
             pa = PromotionAddress.query.get((promotion.id, aid))
             if pa:
@@ -203,3 +203,17 @@ class PromotionsResource(BaseResource):
         promotions = Promotion.query.filter(Promotion.shoppoint_id==shop.id, Promotion.is_deleted==False, Promotion.to_time>datetime.now()).order_by(Promotion.last_order_time.desc()).all()
 
         return promotions
+
+class PromotionOrdersResource(BaseResource):
+    @marshal_with(order_fields)
+    def get(self, shopcode):
+        parser = RequestParser()
+        parser.add_argument('id', type=int, location='args', required=True, help='promotion id should be required')
+        # parser.add_argument('date', type=lambda x: datetime.strptime(x,'%Y-%m-%dT%H:%M:%S'))
+        args = parser.parse_args()
+        logger.debug('GET request args: %s', args)
+
+        shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
+        orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.promotion_id==args['id'], Order.index>0).order_by(Order.index.desc()).all()
+
+        return orders

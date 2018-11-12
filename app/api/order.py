@@ -150,7 +150,7 @@ class OrderResource(BaseResource):
         #order.openid = mo.openid
         #order.payment = data['payment']
         order.mode = 0
-        order.valuecard_allowed = promotion.valuecard_allowed
+        order.valuecard_allowed = promotion.valuecard_allowed if promotion else True
         order.note = data['note']
         order.shoppoint_id = shop.id
         order.shoppoint = shop
@@ -160,7 +160,7 @@ class OrderResource(BaseResource):
         order.cost = 0
         order.delivery_fee = 0 if data['delivery_way'] == 1 else 1000
         for p in data['products']: # TODO if the products code in data['products'] are duplicated, a db error will be occurred
-            product = Product.query.get(p['product']['id']) # filter_by(code=p['code']).first_or_404()
+            product = Product.query.get_or_404(p['product']['id']) # filter_by(code=p['code']).first_or_404()
             logger.debug('the product in order: %s', product)
             op = OrderProduct()
             if promotion:
