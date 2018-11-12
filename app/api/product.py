@@ -95,7 +95,7 @@ class ProductResource(BaseResource):
         if not product:
             is_new_product = True
             product = Product()
-            product.code = datetime.now().strftime('%Y%m%d%%H%M%S%f')
+            product.code = datetime.now().strftime('%Y%m%d%H%M%S%f')
             db.session.add(product)
 
         product.name = data['name']

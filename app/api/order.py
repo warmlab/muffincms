@@ -150,7 +150,7 @@ class OrderResource(BaseResource):
         #order.openid = mo.openid
         #order.payment = data['payment']
         order.mode = 0
-        order.valuecard_allowed = True
+        order.valuecard_allowed = promotion.valuecard_allowed
         order.note = data['note']
         order.shoppoint_id = shop.id
         order.shoppoint = shop
