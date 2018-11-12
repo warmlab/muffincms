@@ -215,7 +215,7 @@ class Promotion(db.Model):
     binding = db.Column(db.Boolean, default=True) # true-捆绑销售
     paymode = db.Column(db.SmallInteger, default=0) # 0-预先支付; 1-货到付款
     valuecard_allowed = db.Column(db.Boolean, default=True) # true-允许使用储值卡支付
-    delivery_way = db.Column(db.SmallInteger, default=3) # 交付方式(按位与)，1-自提；2-快递
+    delivery_way = db.Column(db.SmallInteger, default=1) # 交付方式(按位与)，1-自提；2-快递; 4-不允许快递
     delivery_fee = db.Column(db.Integer, default=1000) # 最低基础运费
     last_order_time = db.Column(db.DateTime, default=datetime.now, nullable=False) # 截单时间
     from_time = db.Column(db.DateTime, default=datetime.now, nullable=False) # 取货开始时间
@@ -346,7 +346,7 @@ class Order(db.Model):
         else:
             next_index = 1
 
-        if next_index % 10 == 4 or next_index == 250:
+        if next_index == 250:
             next_index += 1
 
         self.index = next_index

@@ -81,6 +81,8 @@ class ProductResource(BaseResource):
         parser.add_argument('price', type=int, required=True, help='product price should be required')
         parser.add_argument('member_price', type=int, required=True, help='product member price should be required')
         parser.add_argument('promote_price', type=int, required=True, help='product promote should be required')
+        parser.add_argument('web_allowed', type=bool)
+        parser.add_argument('promote_allowed', type=bool)
         parser.add_argument('stock', type=int)
         parser.add_argument('promote_stock')
         parser.add_argument('summary', type=str)
@@ -103,7 +105,8 @@ class ProductResource(BaseResource):
         product.member_price = data['member_price']
         product.promote_price = data['promote_price']
         product.english_name = data['english_name']
-        product.promote_allowed = True
+        product.web_allowed = data['web_allowed']
+        product.promote_allowed = data['promote_allowed']
         product.summary =  data['summary']
         product.note = data['note']
 
@@ -160,7 +163,7 @@ class ProductResource(BaseResource):
     def delete(self, shopcode):
         parser = RequestParser()
         parser.add_argument('code', type=str, help='product code should be required')
-        args = parser.parse_args(strict=True)
+        args = parser.parse_args()
         logger.debug('GET request args: %s', args)
         if not args['code']:
             logger.error('no code argument in request')
@@ -180,7 +183,19 @@ class ProductResource(BaseResource):
 class ProductsResource(BaseResource):
     @marshal_with(product_fields)
     def get(self, shopcode):
+        parser = RequestParser()
+        parser.add_argument('type', type=str, location='args', required=True, help='product display type should be required')
+        data = parser.parse_args()
+
+        logger.debug('GET request args: %s', data)
         shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
-        products = Product.query.filter_by(shoppoint_id=shop.id, promote_allowed=True, is_deleted=False).all()
+        if data['type'] == 'web':
+            products = Product.query.filter_by(shoppoint_id=shop.id, web_allowed=True, is_deleted=False).all()
+        elif data['type'] == 'promote':
+            products = Product.query.filter_by(shoppoint_id=shop.id, promote_allowed=True, is_deleted=False).all()
+        elif data['type'] == 'pos':
+            products = Product.query.filter_by(shoppoint_id=shop.id, pos_allowed=True, is_deleted=False).all()
+        else:
+            abort(400, status=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS]%'product type')
 
         return products
