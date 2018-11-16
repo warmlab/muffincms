@@ -5,7 +5,7 @@ from .promotion import PromotionResource, PromotionsResource, PromotionOrdersRes
 from .image import ImageResource
 from .product import ProductResource, ProductsResource
 from .order import OrderResource, OrdersResource
-from .member import LoginResource, OpenidResource, OpenidAddressResource, OpenidAddressesResource, TokenCheckerResource
+from .member import LoginResource, OpenidResource, OpenidAddressResource, OpenidAddressesResource, TokenCheckerResource, DecryptResource
 from .address import AddressResource, AddressesResource
 from .category import CategoriesResource
 from .shoppoint import ShoppointResource
@@ -28,6 +28,7 @@ api.add_resource(OrdersResource, '/orders')
 api.add_resource(LoginResource, '/login')
 api.add_resource(TokenCheckerResource, '/tokencheck')
 api.add_resource(OpenidResource, '/openid')
+api.add_resource(DecryptResource, '/openid/decrypt')
 api.add_resource(OpenidAddressResource, '/openid/address')
 api.add_resource(OpenidAddressesResource, '/openid/addresses')
 

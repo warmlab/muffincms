@@ -1,0 +1,67 @@
+<h2>小麦芬团购信息(共有{{orders|length}}人参与团购)</h2>
+<p>{{promotion.note}}</p>
+<h3>团购情况:</h3>
+<table border="1">
+	<thead>
+        <th>#</th>
+        <th>昵称</th>
+        <th>会员</th>
+        <th>金额</th>
+        <th>运费</th>
+        <th>提货</th>
+        <th>商品</th>
+        <th>支付</th>
+        <th>支付时间</th>
+        <th>交付地址</th>
+        <th>备注</th>
+	</thead>
+	<tbody>
+		{% for order in orders -%}
+		<tr>
+			<th scope="row">{{order.index}}</th>
+			<td>{{order.member_openid.nickname}}</td>
+			<td>{%if order.member_openid.phone%}{{order.member_openid.name}}:{{order.member_openid.phone}}{%endif%}</td>
+			<td>￥{{order.cost/100}}</td>
+			<td>{%if order.delivery_fee%}￥{{order.delivery_fee/100}}{%endif%}</td>
+			<td>{%if order.address.delivery_way==1%}自提{%else%}快递{%endif%}</td>
+			<td>{%- for p in order.products %}{{p.product.name}}x{{p.amount}}{%endfor%}</td>
+			<td>{%if order.payment==2%}储值卡支付{%else%}微信支付{%endif%}-{%if order.pay_time and order.payment_code%}已支付{%else%}未支付{%endif%}</td>
+			<td>{%if order.pay_time%}{{order.pay_time}}{%endif%}</td>
+			<td>{%if order.address%}{{order.address.name}}[{{order.address.phone}}]-{{order.address.address}}{%endif%}</td>
+			<td>{{order.note}}</td>
+		</tr>
+		{%- endfor %}
+	</tbody>
+</table>
+<h3>汇总数据:</h3>
+<table border="1">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>商品名</th>
+        <th>数量</th>
+        <th>价格</th>
+        <th>总价</th>
+      </tr>
+    </thead>
+    <tbody>
+        {%- for pp in promotion.products %}
+       <tr>
+           <td>{{loop.index}}</td>
+           <td>{{pp.product.name}}</td>
+           <td>{{pp.sold}}</td>
+           <td>￥{{pp.price/100}}</td>
+           <td>￥{{pp.price/100*pp.sold}}</td>
+      </tr>
+        {%- endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <th>汇总</th>
+        <th></th>
+        <th>{{promotion.products|sum(attribute='sold')}}</th>
+        <th></th>
+        <th>￥{{orders|sum(attribute='cost')/100}}</th>
+      </tr>
+    </tfoot>
+</table>

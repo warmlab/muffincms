@@ -10,12 +10,13 @@ class Config:
     MAIL_SERVER = 'smtp-mail.outlook.com'
     MAIL_PORT = 587
     MAIL_USE_TLS = True
+    MAIL_DEBUG = False
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
-    BAKERY_MAIL_SUBJECT_PREFIX = '[Muffins]'
-    BAKERY_MAIL_SENDER = 'Muffins Admin <warmlab@outlook.com>'
-    BAKERY_ADMIN = os.environ.get('MUFFIN_ADMIN')
-    BAKERY_SLOW_DB_QUERY_TIME=0.5
+    MAIL_DEFAULT_SENDER = 'Muffin Admin <warmlab@outlook.com>'
+    MAIL_SUBJECT_PREFIX = '[Muffins]'
+    #BAKERY_ADMIN = os.environ.get('MUFFIN_ADMIN')
+    #BAKERY_SLOW_DB_QUERY_TIME=0.5
     UPLOAD_FOLDER = os.environ.get('MUFFINCMS_UPLOAD_DIR') or os.path.join(basedir, 'media')
 
     @staticmethod

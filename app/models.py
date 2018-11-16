@@ -238,6 +238,7 @@ class PromotionProduct(db.Model):
 
     promotion_id = db.Column(db.Integer, db.ForeignKey('promotion.id'), primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), primary_key=True)
+    index = db.Column(db.Integer, default=1)# 商品在团购中的排序
 
     price = db.Column(db.Integer, default=0) # 现价 通常等于商品的promote_price
     sold = db.Column(db.Integer, default=0) # 商品卖出量
@@ -245,6 +246,15 @@ class PromotionProduct(db.Model):
 
     product = db.relationship("Product", back_populates="promotions")
     promotion = db.relationship("Promotion", back_populates="products")
+
+    def next_index(self):
+        next_index = db.session.query(db.func.max(PromotionProduct.index)).filter_by(promotion_id=self.promotion_id).scalar()
+        if next_index:
+            next_index += 1
+        else:
+            next_index = 1
+
+        self.index = next_index
 
 class PromotionAddress(db.Model):
     __tablename__ = 'promotion_address'
@@ -479,7 +489,7 @@ class MemberOpenid(db.Model):
         except BadSignature:
             return None # invalid token
 
-        print('session_keys:', self.session_key, data['session_key'])
+        #print('session_keys:', self.session_key, data['session_key'])
         return self.session_key == data['session_key']
 
     @staticmethod

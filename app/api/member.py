@@ -1,3 +1,5 @@
+import base64
+from Crypto.Cipher import AES
 from time import time
 
 from urllib.parse import urlencode
@@ -11,7 +13,7 @@ from flask_restful import fields, marshal_with, abort
 from flask_restful.reqparse import RequestParser
 
 from ..logging import logger
-from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, MESSAGES
+from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, STATUS_CANNOT_DECRYPT, MESSAGES
 
 from ..models import db
 from ..models import MemberOpenid, Shoppoint, Partment, MemberOpenidAddress
@@ -32,6 +34,8 @@ openid_fields = {
     'avatarUrl': fields.String,
     'name': fields.String,
     'phone': fields.String,
+    'contact': fields.String,
+    'mobile': fields.String,
     'access_token': fields.String,
     'privilege': fields.Integer,
     'addresses': fields.List(fields.Nested(address_fields))
@@ -114,6 +118,45 @@ class TokenCheckerResource(BaseResource):
             abort(403, status=STATUS_TOKEN_INVALID, message=MESSAGES[STATUS_TOKEN_INVALID])
 
         return mo
+
+class DecryptResource(BaseResource):
+    def post(self, shopcode):
+        parser = RequestParser()
+        parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
+        parser.add_argument('X-PARTMENT', type=str, location='headers', required=True, help='partment code must be required')
+        parser.add_argument('encryptedData', type=str, required=True, help='encrypted data must be required')
+        parser.add_argument('iv', type=str, required=True, help='iv must be required')
+        parser.add_argument('errMsg', type=str)
+        data = parser.parse_args()
+
+        shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
+        partment = Partment.query.filter_by(shoppoint_id=shop.id, code=data['X-PARTMENT']).first_or_404()
+        mo = MemberOpenid.query.filter_by(shoppoint_id=shop.id, access_token=data['X-ACCESS-TOKEN']).first()
+        if not mo or not mo.verify_access_token(partment.secret_key):
+            abort(403, status=STATUS_TOKEN_INVALID, message=MESSAGES[STATUS_TOKEN_INVALID])
+
+        # decrypt procedure
+        # base64 decode
+        sessionKey = base64.b64decode(mo.session_key)
+        encryptedData = base64.b64decode(data['encryptedData'])
+        iv = base64.b64decode(data['iv'])
+
+        print('ccccccccccccc', sessionKey, iv)
+
+        cipher = AES.new(sessionKey, AES.MODE_CBC, iv)
+
+        s = cipher.decrypt(encryptedData)
+        print('aaaaaaaaaaaaa', s)
+        s = s[:(-s[-1])]
+        print('aaaaaaaaaaaaa', s)
+        decrypted = json.loads(s)
+
+        logger.debug('decrypted after: %s', decrypted)
+
+        if decrypted['watermark']['appid'] != partment.appid:
+            abort(400, STATUS_CANNOT_DECRYPT, MESSAGES[STATUS_CANNOT_DECRYPT])
+
+        return decrypted
 
 class OpenidResource(BaseResource):
     @marshal_with(openid_fields)
