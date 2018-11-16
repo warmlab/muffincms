@@ -122,7 +122,12 @@ class ProductResource(BaseResource):
 
         #photos = [{'code': data['banner'], 'index': 0}]
         #photos.extend(data['images'])
+        photo_ids = []
         for photo in data['images']:
+            if photo['id'] in photo_ids:
+                continue # 发现重复照片，跳过即可
+            else:
+                photo_ids.append(photo['id'])
             image = Image.query.get_or_404(photo['id'])
             #pi = None
             #if not is_new_product:

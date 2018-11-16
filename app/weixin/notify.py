@@ -79,7 +79,7 @@ def notify_customer(order, partment, form_id):
             "value": ' '.join(["x".join([p.product.name, str(p.amount)]) for p in order.products])
             },
         "keyword5":{
-            "value": "自提" if order.address.delivery_way == 1 "快递: 运费 ￥" + str(order.delivery_fee/100)
+            "value": "自提" if order.address.delivery_way == 1 else "快递: 运费 ￥" + str(order.delivery_fee/100)
             },
         "keyword6":{
             "value": '-'.join([order.address.name, order.address.phone])

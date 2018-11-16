@@ -25,6 +25,8 @@ class PayResource(BaseResource):
         parser.add_argument('X-VERSION', type=str, location='headers')
         parser.add_argument('code', type=str, required=True, help='order code must be required')
         parser.add_argument('payment', type=int)
+        parser.add_argument('contact', type=str)
+        parser.add_argument('mobile', type=str)
         parser.add_argument('formId', type=str, required=True, help='form submit id must be required')
 
         data = parser.parse_args()
@@ -40,9 +42,6 @@ class PayResource(BaseResource):
                 'delivery_fee': order.delivery_fee
             }, 200 # TODO already paid formerly
 
-        #if data['payment'] is None:
-        #    data['payment'] = 4
-
         order.payment = data['payment']
         if order.payment == 2:
             payment_info = {
@@ -50,7 +49,6 @@ class PayResource(BaseResource):
                 'cost': order.cost,
                 'delivery_fee': order.delivery_fee
             }
-            #order.index = self._next_index()
             if not mo.name or not mo.phone:
                 abort(400, status=STATUS_NO_VALUE_CARD_INFO, message=MESSAGES[STATUS_NO_VALUE_CARD_INFO])
             else:
@@ -68,6 +66,9 @@ class PayResource(BaseResource):
                     order.prepay_id = result['prepay_id']
                     order.prepay_id_expires = int(time()) + 7200 - 10 # prepay_id的过期时间是2小时
                     #order.next_index()
+                    if order.address.delivery_way == 1 and not order.member_openid.phone: # 自提模式下的非会员
+                        order.address.name = data['contact']
+                        order.address.phone = data['mobile']
 
             # to generate parameters for wx.requestPayment
             payment_info = {

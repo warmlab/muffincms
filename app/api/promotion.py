@@ -1,10 +1,12 @@
 from datetime import datetime
 
-from flask import request
+from flask import request, jsonify, render_template
 
 from flask_restful import abort
 from flask_restful import fields, marshal_with
 from flask_restful.reqparse import RequestParser
+
+from flask_mail import Message
 
 from ..logging import logger
 from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, MESSAGES
@@ -19,6 +21,8 @@ from .address import address_fields
 from .order import order_fields
 from .base import BaseResource
 from .field import DateTimeField
+
+from .. import mail
 
 
 promotion_product_fields = {
@@ -133,7 +137,7 @@ class PromotionResource(BaseResource):
         else:
             promotion.publish_time = datetime.strptime(' '.join([data['publish_date'], data['publish_time']]), '%Y-%m-%d %H:%M')
         #promotion.products = []
-        for p in data['products']:
+        for index, p in enumerate(data['products']):
             product = Product.query.filter_by(code=p['code']).first_or_404()
             pp = PromotionProduct.query.get((promotion.id, product.id))
             if not pp:
@@ -142,6 +146,7 @@ class PromotionResource(BaseResource):
                 pp.promotion = promotion
                 promotion.products.append(pp)
                 #db.session.add(pp)
+            pp.next_index()
             if p['price']:
                 pp.price = p['price']
             else:
@@ -195,12 +200,44 @@ class PromotionResource(BaseResource):
             logger.warning(MESSAGES[STATUS_NO_RESOURCE])
             abort(404, status=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE])
 
+    # TODO used for sending emails
+    def put(self, shopcode):
+        parser = RequestParser()
+        parser.add_argument('id', type=int, required=True, help='promotion id should be required')
+        # parser.add_argument('date', type=lambda x: datetime.strptime(x,'%Y-%m-%dT%H:%M:%S'))
+        args = parser.parse_args()
+        logger.debug('GET request args: %s', args)
+
+        shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
+        promotion = Promotion.query.get(args['id'])
+        if not promotion or promotion.shoppoint_id != shop.id:
+            logger.warning(MESSAGES[STATUS_NO_RESOURCE])
+            abort(404, status=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE])
+
+        orders = Order.query.filter(Order.promotion_id==promotion.id, Order.index>0).order_by(Order.index).all()
+
+        msg = Message('小麦芬团购-' + promotion.name, recipients=["bzip@qq.com", "nzip@qq.com"])
+        msg.html = render_template('mail/promotion_orders.html', orders=orders, promotion=promotion)
+
+        with mail.connect() as conn:
+            conn.send(msg)
+
+        return jsonify({})
+
 
 class PromotionsResource(BaseResource):
     @marshal_with(promotion_fields)
     def get(self, shopcode):
+        parser = RequestParser()
+        parser.add_argument('manage', type=bool, location='args')
+        # parser.add_argument('date', type=lambda x: datetime.strptime(x,'%Y-%m-%dT%H:%M:%S'))
+        args = parser.parse_args()
+        logger.debug('GET request args: %s', args)
         shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
-        promotions = Promotion.query.filter(Promotion.shoppoint_id==shop.id, Promotion.is_deleted==False, Promotion.to_time>datetime.now()).order_by(Promotion.last_order_time.desc()).all()
+        if args['manage']:
+            promotions = Promotion.query.filter_by(shoppoint_id=shop.id, is_deleted=False).order_by(Promotion.last_order_time.desc()).all()
+        else:
+            promotions = Promotion.query.filter(Promotion.shoppoint_id==shop.id, Promotion.is_deleted==False, Promotion.to_time>datetime.now()).order_by(Promotion.last_order_time.desc()).all()
 
         return promotions
 

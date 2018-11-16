@@ -1,6 +1,8 @@
 from flask import Flask
 from flask import send_from_directory
 
+from flask_mail import Mail
+
 from config import config
 from .logging import init_logging
 
@@ -8,6 +10,8 @@ from .logging import init_logging
 #from .admin import init_admin
 
 from .models import db
+
+mail = Mail()
 
 def create_app(config_name):
     app = Flask(__name__)
@@ -18,6 +22,7 @@ def create_app(config_name):
     db.init_app(app)
     # should be comment
     #init_admin(app)
+    mail.init_app(app)
 
     if not app.debug and not app.testing and not app.config['SSL_DISABLE']:
         from flask_sslify import SSLify

@@ -7,6 +7,7 @@ STATUS_TOKEN_INVALID = 3001
 STATUS_TOKEN_EXPIRED = 3002
 STATUS_NO_ORDER_STATUS = 4000
 STATUS_NO_VALUE_CARD_INFO = 4001
+STATUS_CANNOT_DECRYPT = 5001
 
 MESSAGES = {
     STATUS_NO_REQUIRED_HEADERS: 'access token or version was not existed in request header',
@@ -17,4 +18,5 @@ MESSAGES = {
     STATUS_TOKEN_EXPIRED: 'the access token in header was expired',
     STATUS_NO_ORDER_STATUS: 'status code is invalid in request',
     STATUS_NO_VALUE_CARD_INFO: 'value card info was not binding to the member',
+    STATUS_CANNOT_DECRYPT: 'cannot decrypt the request things',
 }
