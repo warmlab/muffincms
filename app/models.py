@@ -228,7 +228,7 @@ class Promotion(db.Model):
     shoppoint_id = db.Column(db.Integer, db.ForeignKey('shoppoint.id'), nullable=True)
     shoppoint = db.relationship('Shoppoint', backref=db.backref('promotions', lazy="dynamic"))
 
-    products = db.relationship('PromotionProduct', back_populates="promotion")
+    products = db.relationship('PromotionProduct', back_populates="promotion", order_by="PromotionProduct.index")
     orders = db.relationship('Order', back_populates='promotion', order_by="desc(Order.index)")
     addresses = db.relationship('PromotionAddress', back_populates='promotion')
 
@@ -238,6 +238,7 @@ class PromotionProduct(db.Model):
 
     promotion_id = db.Column(db.Integer, db.ForeignKey('promotion.id'), primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), primary_key=True)
+    index = db.Column(db.Integer, default=1)# 商品在团购中的排序
 
     price = db.Column(db.Integer, default=0) # 现价 通常等于商品的promote_price
     sold = db.Column(db.Integer, default=0) # 商品卖出量

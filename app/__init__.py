@@ -4,6 +4,9 @@ from flask import send_from_directory
 from config import config
 from .logging import init_logging
 
+# should be comment
+#from .admin import init_admin
+
 from .models import db
 
 def create_app(config_name):
@@ -13,6 +16,8 @@ def create_app(config_name):
 
     init_logging(app)
     db.init_app(app)
+    # should be comment
+    #init_admin(app)
 
     if not app.debug and not app.testing and not app.config['SSL_DISABLE']:
         from flask_sslify import SSLify

@@ -67,19 +67,19 @@ def notify_customer(order, partment, form_id):
     # 提醒顾客订单已经付款
     data = {
         "keyword1": {
-            "value": order.index,
+            "value": order.index
             },
         "keyword2": {
-            "value": order.code,
+            "value": order.code
             },
         "keyword3":{
-            "value": '￥' + str(order.cost/100),
+            "value": '￥' + str(order.cost/100)
             },
         "keyword4":{
-            "value": ' '.join(["x".join([p.product.name, str(p.amount)]) for p in order.products]),
+            "value": ' '.join(["x".join([p.product.name, str(p.amount)]) for p in order.products])
             },
         "keyword5":{
-            "value": "自提" if order.address.delivery_way==1 else "快递: 运费 ￥" + str(order.delivery_fee/100)
+            "value": "自提" if order.address.delivery_way == 1 "快递: 运费 ￥" + str(order.delivery_fee/100)
             },
         "keyword6":{
             "value": '-'.join([order.address.name, order.address.phone])
@@ -91,10 +91,10 @@ def notify_customer(order, partment, form_id):
             "value": '您已拼团成功，如需退款，请务必在截单前申请退款，截单后不予退款，谢谢理解'
             },
         "keyword9":{
-            "value": order.note,
+            "value": order.note
             },
         "keyword10":{
-            "value": '如有疑问，可以拨打客服电话: 13370836021'
+            "value": '如有疑问，可以拨打客服电话: 13370836021，服务时间：9:00~19:00'
             }
     }
     j = {
