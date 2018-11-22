@@ -29,7 +29,8 @@ promotion_product_fields = {
     'price': fields.Integer,
     'sold': fields.Integer,
     'stock': fields.Integer,
-    'product': fields.Nested(product_fields)
+    'product': fields.Nested(product_fields),
+    'is_deleted': fields.Boolean
 }
 
 promotion_address_fields = {
@@ -136,7 +137,8 @@ class PromotionResource(BaseResource):
             promotion.publish_time = datetime.now()
         else:
             promotion.publish_time = datetime.strptime(' '.join([data['publish_date'], data['publish_time']]), '%Y-%m-%d %H:%M')
-        #promotion.products = []
+        if promotion.products:
+            PromotionProduct.query.filter_by(promotion_id=promotion.id).update({'is_deleted': True})
         for index, p in enumerate(data['products']):
             product = Product.query.filter_by(code=p['code']).first_or_404()
             pp = PromotionProduct.query.get((promotion.id, product.id))
@@ -146,7 +148,8 @@ class PromotionResource(BaseResource):
                 pp.promotion = promotion
                 promotion.products.append(pp)
                 #db.session.add(pp)
-            pp.next_index()
+            pp.index = index + 1
+            pp.is_deleted = False
             if p['price']:
                 pp.price = p['price']
             else:

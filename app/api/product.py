@@ -11,7 +11,7 @@ from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, MESSAGES
 
 from ..models import db
 from ..models import Shoppoint, Product
-from ..models import Image, ProductImage, ProductSpec
+from ..models import Image, ProductImage, ProductSize
 
 from .base import BaseResource
 from .image import image_fields

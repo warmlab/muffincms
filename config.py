@@ -13,7 +13,7 @@ class Config:
     MAIL_DEBUG = False
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
-    MAIL_DEFAULT_SENDER = 'Muffin Admin <warmlab@outlook.com>'
+    MAIL_DEFAULT_SENDER = 'Muffins Admin <warmlab@outlook.com>'
     MAIL_SUBJECT_PREFIX = '[Muffins]'
     #BAKERY_ADMIN = os.environ.get('MUFFIN_ADMIN')
     #BAKERY_SLOW_DB_QUERY_TIME=0.5

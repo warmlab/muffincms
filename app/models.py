@@ -105,8 +105,10 @@ class ProductCategory(db.Model):
     name = db.Column(db.String(128), unique=True, index=True)
     english_name = db.Column(db.String(128), unique=True, index=True, nullable=False)
     slug = db.Column(db.String(128), unique=True, index=True, nullable=True)
+    extra_info = db.Column(db.BigInteger, default=0) # 额外信息标志, 用位表示需要的信息，默认不需要
     web_allowed = db.Column(db.Boolean, default=True) # web端显示标志
     pos_allowed = db.Column(db.Boolean, default=True) # POS端显示标志
+    promote_allowed = db.Column(db.Boolean, default=True) # 团购显示标志
     is_deleted = db.Column(db.Boolean, default=False) # 删除标志
     to_point = db.Column(db.Boolean, default=False) # 是否参与积分
     summary = db.Column(db.Text)
@@ -122,9 +124,9 @@ class Product(db.Model):
     name = db.Column(db.String(128), unique=True, index=True)
     english_name = db.Column(db.String(128), index=True)
     pinyin = db.Column(db.String(128), unique=True, index=True)
-    price = db.Column(db.Integer, default=9999.0) # 现价
-    member_price = db.Column(db.Integer, default=9999.0) # 会员价
-    promote_price = db.Column(db.Integer, default=9999.0) # 建议的促销价, 团购价
+    price = db.Column(db.Integer, default=999900) # 现价
+    member_price = db.Column(db.Integer, default=999900) # 会员价
+    promote_price = db.Column(db.Integer, default=999900) # 建议的促销价, 团购价
     sold = db.Column(db.Integer, default=0) # 一共卖出的数量
     promote_sold = db.Column(db.Integer, default=0) # 促销卖了多少
     stock = db.Column(db.Integer, default=0) # 库存
@@ -149,30 +151,50 @@ class Product(db.Model):
     promotions = db.relationship('PromotionProduct', back_populates='product')
     orders = db.relationship('OrderProduct', back_populates='product')
     histories = db.relationship('HistoryProduct', back_populates='product')
+    sizes = db.relationship('ProductSize', back_populates='product', order_by='asc(ProductSize.index)')
 
     def __repr__(self):
         return self.name
 
-class ProductSpec(db.Model):
-    __tablename__ = 'product_spec'
+
+class Size(db.Model):
+    __tablename__ = 'size'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64)) # 规格, 如：80克-巧克力味
-    #spec = db.Column(db.String(64)) # 规格, 如：80克-巧克力味
-    #size = db.Column(db.Integer) # 蛋糕尺寸大小/或面包的重量，单位cm/g
-    #share_min = db.Column(db.Integer) # 可以分享的最小人数
-    #share_max = db.Column(db.Integer) # 可以分享的最大人数
-    #tableware = db.Column(db.Integer) # 包含餐具个数
-    #pre_order_time = db.Column(db.Integer) # 需提前预定时间，单位hour
-    price_plus = db.Column(db.Integer, default=999900) # 在原价的基础上加上该价格
-    promote_price_plus = db.Column(db.Integer, default=999900) # 在促销价的基础上加上该价格
-    stock = db.Column(db.Integer, default=0) # 库存
+    name = db.Column(db.String(64)) # 尺寸名称，如‘6寸’
+    value = db.Column(db.Integer) # size value used in system
+    index = db.Column(db.SmallInteger, default=0) # 在列表的顺序
+    # image
+    spec = db.Column(db.SmallInteger, default=20) # 规格大小，如直径20cm
+    shared_min = db.Column(db.SmallInteger, default=3) # 适合分享最少人数
+    shared_max = db.Column(db.SmallInteger, default=4) # 适合分享最多人数
+    utensils = db.Column(db.SmallInteger, default=10) # 含有餐具的数量
+    pre_order_hours = db.Column(db.SmallInteger, default=24) # 须提前预定的小时数
+    banner = db.Column(db.String(128)) # 该尺寸的图片
+
+    price_plus = db.Column(db.Integer, default=0) # 在原价的基础上加上该价格
+    promote_price_plus = db.Column(db.Integer, default=0) # 在促销价的基础上加上该价格
+
+    shoppoint_id = db.Column(db.Integer, db.ForeignKey('shoppoint.id'), nullable=True)
+    shoppoint = db.relationship('Shoppoint', backref=db.backref('specs', lazy="dynamic"))
+
+    products = db.relationship('ProductSize', back_populates='size')
+
+class ProductSize(db.Model): # 产品尺寸，一般用于蛋糕
+    __tablename__ = 'product_size'
+    #id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), primary_key=True)
+    size_id = db.Column(db.Integer, db.ForeignKey('size.id'), primary_key=True)
+    #name = db.Column(db.String(64)) # 规格, 如：80克-巧克力味
+    index = db.Column(db.SmallInteger, default=0) # 在列表的顺序
+    price_plus = db.Column(db.Integer, default=0) # 在原价的基础上加上该价格
+    promote_price_plus = db.Column(db.Integer, default=0) # 在促销价的基础上加上该价格
     promote_stock = db.Column(db.Integer, default=0) # 参与促销的库存
+    stock = db.Column(db.Integer, default=0) # 库存
     promote_sold = db.Column(db.Integer, default=0) # 促销卖了多少
     sold = db.Column(db.Integer, default=0) # 一共卖了多少（包括促销部分）
 
-    product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
-    product = db.relationship('Product',
-                         backref=db.backref('specs', lazy="dynamic"))
+    product = db.relationship('Product', back_populates='sizes')
+    size = db.relationship('Size', back_populates='products')
 
 
 class Image(db.Model):
@@ -205,9 +227,6 @@ class ProductImage(db.Model):
     product = db.relationship("Product", back_populates="images")
     image = db.relationship('Image', back_populates='products')
 
-    def __repr__(self):
-        return "%s - %s" % (self.product_id, self.image_id)
-
 class Promotion(db.Model):
     __tablename__ = 'promotion'
     id = db.Column(db.Integer, primary_key=True)
@@ -228,7 +247,8 @@ class Promotion(db.Model):
     shoppoint_id = db.Column(db.Integer, db.ForeignKey('shoppoint.id'), nullable=True)
     shoppoint = db.relationship('Shoppoint', backref=db.backref('promotions', lazy="dynamic"))
 
-    products = db.relationship('PromotionProduct', back_populates="promotion")
+    products = db.relationship('PromotionProduct', back_populates="promotion",
+                               order_by="asc(PromotionProduct.index)")
     orders = db.relationship('Order', back_populates='promotion', order_by="desc(Order.index)")
     addresses = db.relationship('PromotionAddress', back_populates='promotion')
 
@@ -239,6 +259,7 @@ class PromotionProduct(db.Model):
     promotion_id = db.Column(db.Integer, db.ForeignKey('promotion.id'), primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), primary_key=True)
     index = db.Column(db.Integer, default=1)# 商品在团购中的排序
+    is_deleted = db.Column(db.Boolean, default=False) # 是否删除产品
 
     price = db.Column(db.Integer, default=0) # 现价 通常等于商品的promote_price
     sold = db.Column(db.Integer, default=0) # 商品卖出量

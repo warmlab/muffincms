@@ -1,7 +1,27 @@
+<style>
+body {
+	font-family: 'Lucida Grande', 'Lucida Sans Unicode', Tahoma, sans-serif;
+}
+
+table {
+	border-bottom: 1px solid #eee;
+	font-size: 14px;
+	line-height: 135%;
+	border-spacing: 0;
+	border-collapse: collapse;
+	width: 100%;
+}
+
+th, td {
+	vertical-align: top;
+	padding: 10px 20px;
+	border-top: 1px solid #eee;
+}
+</style>
 <h2>小麦芬团购信息(共有{{orders|length}}人参与团购)</h2>
 <p>{{promotion.note}}</p>
 <h3>团购情况:</h3>
-<table border="1">
+<table>
 	<thead>
         <th>#</th>
         <th>昵称</th>
@@ -34,7 +54,7 @@
 	</tbody>
 </table>
 <h3>汇总数据:</h3>
-<table border="1">
+<table>
     <thead>
       <tr>
         <th>#</th>
@@ -57,8 +77,8 @@
     </tbody>
     <tfoot>
       <tr>
-        <th>汇总</th>
         <th></th>
+        <th>汇总</th>
         <th>{{promotion.products|sum(attribute='sold')}}</th>
         <th></th>
         <th>￥{{orders|sum(attribute='cost')/100}}</th>
