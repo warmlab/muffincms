@@ -25,9 +25,15 @@ def notify_admins(order, shoppoint_id):
     # 提醒接龙发起者有新订单了
     products = ['x'.join([p.product.name, str(p.amount)]) for p in order.products]
 
+    promotion = order.promotion
+    if promotion:
+        first = promotion.name + '-拼团订单, 编号: ' + str(order.index)
+    else:
+        first = '商城订单: ' + order.code
+
     data = {
             "first": {
-                "value": order.code if not order.index else '拼团编号: ' + str(order.index)
+                "value": first
                 },
             "keyword1": {
                 "value": ' '.join(products)
@@ -56,7 +62,7 @@ def notify_admins(order, shoppoint_id):
             'template_id': 'pkl-0GTnDHxthXtR381PPNAooBT1JwUYuuP-YK1nRSA',
             'touser': u,
             'data': data,
-            'url': 'http://wecakes.com'
+            'url': 'http://wecakes.com/admin/promotion/orders?promotion=' + promotion.id + '&order=' + order.code
             }
         body = json.dumps(j)
         result = access_weixin_api('https://api.weixin.qq.com/cgi-bin/message/template/send', body, access_token=web.get_access_token())
