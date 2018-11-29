@@ -3,7 +3,7 @@ from urllib.request import urlopen
 
 from flask import json
 
-from ..models import Partment
+from ..models import Partment, Shoppoint, Staff
 from ..logging import logger
 
 def access_weixin_api(url, body, **kwargs):
@@ -56,11 +56,13 @@ def notify_admins(order, shoppoint_id):
                 }
             }
 
-    for u in ('ox4bxso53hocK9iyC-eKNll-qRoI',
-            'ox4bxsnBj7xpsSndE4TOg_LY-IKQ', 'ox4bxsjScfpMhLESnt4AziP5ByuI'):
+    staffs = Staff.query.filter(Staff.shoppoint_id==shoppoint_id, Staff.privilege&1==1)
+    for staff in staffs:
+    #for u in ('ox4bxso53hocK9iyC-eKNll-qRoI',
+    #        'ox4bxsnBj7xpsSndE4TOg_LY-IKQ', 'ox4bxsjScfpMhLESnt4AziP5ByuI'):
         j = {
             'template_id': 'pkl-0GTnDHxthXtR381PPNAooBT1JwUYuuP-YK1nRSA',
-            'touser': u,
+            'touser': staff.openid,
             'data': data,
             'url': 'http://wecakes.com/admin/promotion/orders?promotion=' + promotion.id + '&order=' + order.code
             }

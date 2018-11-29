@@ -236,6 +236,7 @@ class Promotion(db.Model):
     valuecard_allowed = db.Column(db.Boolean, default=True) # true-允许使用储值卡支付
     delivery_way = db.Column(db.SmallInteger, default=1) # 交付方式(按位与)，1-自提；2-快递; 4-不允许快递
     delivery_fee = db.Column(db.Integer, default=1000) # 最低基础运费
+    delivery_threshold = db.Column(db.Integer, default=8800) # 免邮金额
     last_order_time = db.Column(db.DateTime, default=datetime.now, nullable=False) # 截单时间
     from_time = db.Column(db.DateTime, default=datetime.now, nullable=False) # 取货开始时间
     to_time = db.Column(db.DateTime, default=datetime.now, nullable=False) # 取货结束时间
@@ -450,6 +451,18 @@ class OrderAddress(db.Model):
     delivery_time = db.Column(db.DateTime, default=datetime.now) # 交付时间
 
     order = db.relationship("Order", back_populates="address")
+
+class Staff(db.Model):
+    __tablename__ = 'staff'
+    id = db.Column(db.Integer, primary_key=True)
+    openid = db.Column(db.String(64), primary_key=True) # used in weixin
+    nickname = db.Column(db.String(128)) # 昵称
+    name = db.Column(db.String(128), index=True) # 姓名
+    gender = db.Column(db.SmallInteger, default=0) # 会员性别, 0为unkown
+    phone = db.Column(db.String(12), unique=True, index=True) #手机号码
+    email = db.Column(db.String(64), unique=True, index=True)
+    privilege = db.Column(db.Integer, default=0) # every bit as a privilege
+
 
 class Member(db.Model):
     __tablename__ = 'member'
