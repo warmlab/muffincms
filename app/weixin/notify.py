@@ -27,7 +27,7 @@ def notify_admins(order, shoppoint_id):
 
     promotion = order.promotion
     if promotion:
-        first = promotion.name + '-拼团订单, 编号: ' + str(order.index)
+        first = promotion.name + '-拼团编号: ' + str(order.index)
     else:
         first = '商城订单: ' + order.code
 

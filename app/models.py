@@ -6,6 +6,8 @@ from urllib.parse import urlencode
 from urllib.request import urlopen
 from urllib.request import Request
 
+#from sqlalchemy.ext.hybrid import hybrid_property, hybrid_method
+
 #from flask import current_app#, url_for
 from flask_sqlalchemy import SQLAlchemy
 
@@ -102,17 +104,23 @@ class Partment(db.Model):
 class ProductCategory(db.Model):
     __tablename__ = 'product_category'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(128), unique=True, index=True)
-    english_name = db.Column(db.String(128), unique=True, index=True, nullable=False)
+    name = db.Column(db.String(128), index=True, nullable=False)
+    english_name = db.Column(db.String(128), index=True)
     slug = db.Column(db.String(128), unique=True, index=True, nullable=True)
     extra_info = db.Column(db.BigInteger, default=0) # 额外信息标志, 用位表示需要的信息，默认不需要
-    web_allowed = db.Column(db.Boolean, default=True) # web端显示标志
-    pos_allowed = db.Column(db.Boolean, default=True) # POS端显示标志
-    promote_allowed = db.Column(db.Boolean, default=True) # 团购显示标志
+    index = db.Column(db.SmallInteger, default=0) # 在列表的顺序
+    show_allowed = db.Column(db.Integer, default=1023) # 显示标志，0x01-web display, 0x02-pos display, 0x04-promotion display
+    #web_allowed = db.Column(db.Boolean, default=True) # web端允许标志
+    #pos_allowed = db.Column(db.Boolean, default=True) # POS端允许标志
+    #promote_allowed = db.Column(db.Boolean, default=True) # 团购允许标志
     is_deleted = db.Column(db.Boolean, default=False) # 删除标志
     to_point = db.Column(db.Boolean, default=False) # 是否参与积分
     summary = db.Column(db.Text)
     note = db.Column(db.Text)
+
+    shoppoint_id = db.Column(db.Integer, db.ForeignKey('shoppoint.id'))
+    shoppoint = db.relationship('Shoppoint',
+                         backref=db.backref('categories', lazy="dynamic"))
 
     def __repr__(self):
         return self.name
@@ -135,9 +143,10 @@ class Product(db.Model):
     summary = db.Column(db.Text)
     note = db.Column(db.Text)
 
-    web_allowed = db.Column(db.Boolean, default=True) # web端显示标志
-    pos_allowed = db.Column(db.Boolean, default=True) # POS端显示标志
-    promote_allowed = db.Column(db.Boolean, default=True) # 是否参与促销
+    show_allowed = db.Column(db.Integer, default=1023) # 显示标志，0x01-web display, 0x02-pos display, 0x04-promotion display
+    #web_allowed = db.Column(db.Boolean, default=True) # web端允许标志
+    #pos_allowed = db.Column(db.Boolean, default=True) # POS端允许标志
+    #promote_allowed = db.Column(db.Boolean, default=True) # 是否参与促销
     is_deleted = db.Column(db.Boolean, default=False) # 删除标志
 
     category_id = db.Column(db.Integer, db.ForeignKey('product_category.id'))
