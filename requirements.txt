@@ -1,0 +1,11 @@
+pycrypt>=0.7
+psycopg2-binary>=2.7
+itsdangerous>=1.1
+sqlalchemy>=1.2
+
+flask>=1.0
+flask-cli>=0.4
+flask-sqlalchemy>=2.3.2
+flask-migrate>=2.3
+flask_mail>=0.9
+flask_restful>=0.3
