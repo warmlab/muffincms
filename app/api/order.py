@@ -213,15 +213,18 @@ class OrdersResource(BaseResource):
         shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
         parser = RequestParser()
         parser.add_argument('status', type=str, location='args', required=True, help='order status must be required')
+        parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
         data = parser.parse_args()
+
+        mo = MemberOpenid.query.filter_by(access_token=data['X-ACCESS-TOKEN']).first()
 
         status = data['status']
         if status == 'wait':
-            orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.mode==0, Order.payment_code==None, Order.pay_time==None).order_by(Order.code.desc()).all()
+            orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.openid==mo.openid, Order.mode==0, Order.payment_code==None, Order.pay_time==None).order_by(Order.code.desc()).all()
         elif status == 'paid':
-            orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.mode==0, Order.payment_code!=None, Order.pay_time!=None, Order.finished_time==None).order_by(Order.code.desc()).all()
+            orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.openid==mo.openid, Order.mode==0, Order.payment_code!=None, Order.pay_time!=None, Order.finished_time==None).order_by(Order.code.desc()).all()
         elif status == 'finished':
-            orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.mode==0, Order.payment_code!=None, Order.pay_time!=None, Order.finished_time!=None).order_by(Order.code.desc()).all()
+            orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.openid==mo.openid, Order.mode==0, Order.payment_code!=None, Order.pay_time!=None, Order.finished_time!=None).order_by(Order.code.desc()).all()
         else:
             abort(400, status=STATUS_NO_ORDER_STATUS, message=MESSAGES[STATUS_NO_ORDER_STATUS])
 

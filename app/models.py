@@ -463,6 +463,10 @@ class Staff(db.Model):
     email = db.Column(db.String(64), unique=True, index=True)
     privilege = db.Column(db.Integer, default=0) # every bit as a privilege
 
+    shoppoint_id = db.Column(db.Integer, db.ForeignKey('shoppoint.id'), nullable=True)
+    shoppoint = db.relationship('Shoppoint',
+                         backref=db.backref('staffs', lazy="dynamic"))
+
 
 class Member(db.Model):
     __tablename__ = 'member'
@@ -481,6 +485,10 @@ class Member(db.Model):
     address = db.Column(db.String(512)) # 会员备注地址
     about_me = db.Column(db.Text)
     note = db.Column(db.Text)
+
+    shoppoint_id = db.Column(db.Integer, db.ForeignKey('shoppoint.id'), nullable=True)
+    shoppoint = db.relationship('Shoppoint',
+                         backref=db.backref('members', lazy="dynamic"))
 
 class MemberOpenid(db.Model):
     __tablename__ = 'member_openid'
@@ -503,7 +511,7 @@ class MemberOpenid(db.Model):
 
     shoppoint_id = db.Column(db.Integer, db.ForeignKey('shoppoint.id'), nullable=True)
     shoppoint = db.relationship('Shoppoint',
-                         backref=db.backref('openid', lazy="dynamic"))
+                         backref=db.backref('openids', lazy="dynamic"))
 
     def generate_auth_token(self, secret_key, expiration=7200):
         s = TimedSerializer(secret_key, expires_in=expiration)

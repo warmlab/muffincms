@@ -28,8 +28,10 @@ def notify_admins(order, shoppoint_id):
     promotion = order.promotion
     if promotion:
         first = promotion.name + '-拼团订单, 编号: ' + str(order.index)
+        url = 'http://wecakes.com/admin/promotion/orders?promotion=' + str(promotion.id) + '&order=' + order.code
     else:
         first = '商城订单: ' + order.code
+        url = 'http://wecakes.com/admin/orders?order=' + order.code
 
     data = {
             "first": {
@@ -56,7 +58,7 @@ def notify_admins(order, shoppoint_id):
                 }
             }
 
-    staffs = Staff.query.filter(Staff.shoppoint_id==shoppoint_id, Staff.privilege&1==1)
+    staffs = Staff.query.filter(Staff.shoppoint_id==shoppoint_id, Staff.privilege.op('&')(1)==1).all()
     for staff in staffs:
     #for u in ('ox4bxso53hocK9iyC-eKNll-qRoI',
     #        'ox4bxsnBj7xpsSndE4TOg_LY-IKQ', 'ox4bxsjScfpMhLESnt4AziP5ByuI'):
@@ -64,7 +66,7 @@ def notify_admins(order, shoppoint_id):
             'template_id': 'pkl-0GTnDHxthXtR381PPNAooBT1JwUYuuP-YK1nRSA',
             'touser': staff.openid,
             'data': data,
-            'url': 'http://wecakes.com/admin/promotion/orders?promotion=' + promotion.id + '&order=' + order.code
+            'url': url
             }
         body = json.dumps(j)
         result = access_weixin_api('https://api.weixin.qq.com/cgi-bin/message/template/send', body, access_token=web.get_access_token())

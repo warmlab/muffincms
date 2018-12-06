@@ -66,9 +66,13 @@ class PayResource(BaseResource):
                     order.prepay_id = result['prepay_id']
                     order.prepay_id_expires = int(time()) + 7200 - 10 # prepay_id的过期时间是2小时
                     #order.next_index()
-                    if order.address.delivery_way == 1 and not order.member_openid.phone: # 自提模式下的非会员
-                        order.address.name = data['contact']
-                        order.address.phone = data['mobile']
+                    if order.address.delivery_way == 1:
+                        if not order.member_openid.phone: # 自提模式下的非会员
+                            order.address.name = data['contact']
+                            order.address.phone = data['mobile']
+                        else:
+                            order.address.name = order.member_openid.name
+                            order.address.phone = order.member_openid.phone
 
             # to generate parameters for wx.requestPayment
             payment_info = {
