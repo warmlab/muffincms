@@ -10,12 +10,14 @@ from ..logging import logger
 from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, MESSAGES
 
 from ..models import db
-from ..models import Shoppoint, Product
+from ..models import Shoppoint, Product, ProductCategory
 from ..models import Image, ProductImage, ProductSize
 
 from .base import BaseResource
 from .image import image_fields
 from .category import category_fields
+
+from .field import WebAllowedField, POSAllowedField, PromoteAllowedField
 
 product_image_fields = {
     'index': fields.Integer,
@@ -41,9 +43,9 @@ product_fields = {
     'promote_stock': fields.Integer,
     'summary': fields.String,
     'note': fields.String,
-    'web_allowed': fields.Boolean,
-    'pos_allowed': fields.Boolean,
-    'promote_allowed': fields.Boolean,
+    'web_allowed': WebAllowedField(attribute='show_allowed'),
+    'pos_allowed': POSAllowedField(attribute='show_allowed'),
+    'promote_allowed': PromoteAllowedField(attribute='show_allowed'),
     'is_deleted': fields.Boolean,
     'category': fields.Nested(category_fields),
     'images': fields.List(fields.Nested(product_image_fields)),
@@ -78,6 +80,7 @@ class ProductResource(BaseResource):
         parser.add_argument('code', type=str)
         parser.add_argument('name', type=str, required=True, help='product name should be required')
         parser.add_argument('english_name', type=str)
+        parser.add_argument('category', type=int)
         parser.add_argument('price', type=int, required=True, help='product price should be required')
         parser.add_argument('member_price', type=int, required=True, help='product member price should be required')
         parser.add_argument('promote_price', type=int, required=True, help='product promote should be required')
@@ -105,17 +108,25 @@ class ProductResource(BaseResource):
         product.member_price = data['member_price']
         product.promote_price = data['promote_price']
         product.english_name = data['english_name']
-        product.web_allowed = data['web_allowed']
-        product.promote_allowed = data['promote_allowed']
+        product.show_allowed = 2 # TODO POS allowed is default just now
+        if data['web_allowed']:
+            product.show_allowed |= 1
+        if data['promote_allowed']:
+            product.show_allowed |= 4
+        #product.web_allowed = data['web_allowed']
+        #product.promote_allowed = data['promote_allowed']
         product.summary =  data['summary']
         product.note = data['note']
 
         product.shoppoint_id = shop.id
         product.shoppoint = shop
 
+        category = ProductCategory.query.get_or_404(data['category'])
+        product.category_id = category.id
+        product.category = category
+
         logger.debug(data)
 
-        print(data['images'])
         for i in product.images:
             db.session.delete(i)
         product.images = []
@@ -189,18 +200,22 @@ class ProductsResource(BaseResource):
     @marshal_with(product_fields)
     def get(self, shopcode):
         parser = RequestParser()
-        parser.add_argument('type', type=str, location='args', required=True, help='product display type should be required')
+        parser.add_argument('type', type=int, location='args', required=True, help='terminal type should be required')
+        parser.add_argument('category', type=int, location='args')
         data = parser.parse_args()
 
         logger.debug('GET request args: %s', data)
         shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
-        if data['type'] == 'web':
-            products = Product.query.filter_by(shoppoint_id=shop.id, web_allowed=True, is_deleted=False).all()
-        elif data['type'] == 'promote':
-            products = Product.query.filter_by(shoppoint_id=shop.id, promote_allowed=True, is_deleted=False).all()
-        elif data['type'] == 'pos':
-            products = Product.query.filter_by(shoppoint_id=shop.id, pos_allowed=True, is_deleted=False).all()
+        if data['category']:
+            category = ProductCategory.query.get_or_404(data['category'])
+            products = Product.query.filter(Product.shoppoint_id==shop.id,
+                                            Product.category_id==category.id,
+                                            Product.show_allowed.op('&')(data['type'])>0,
+                                            Product.is_deleted==False).all()
+
         else:
-            abort(400, status=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS]%'product type')
+            products = Product.query.filter(Product.shoppoint_id==shop.id,
+                                            Product.show_allowed.op('&')(data['type'])>0,
+                                            Product.is_deleted==False).all()
 
         return products
