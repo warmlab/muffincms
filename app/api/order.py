@@ -15,9 +15,9 @@ from ..logging import logger
 from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, STATUS_NO_ORDER_STATUS, MESSAGES
 
 from ..models import db
-from ..models import Shoppoint, Partment, Order, Promotion, Product, MemberOpenid
+from ..models import Shoppoint, Partment, Order, Promotion, Product, MemberOpenid, Size
 from ..models import OrderProduct, OrderAddress
-from ..models import PromotionProduct, MemberOpenidAddress, PickupAddress
+from ..models import PromotionProduct, MemberOpenidAddress, PickupAddress, ProductSize
 
 from .member import openid_fields
 from .product import product_fields
@@ -111,6 +111,10 @@ class OrderResource(BaseResource):
 
         data = parser.parse_args()
 
+        print(data['products'])
+
+        partment = Partment.query.filter_by(shoppoint_id=shop.id, code=data['X-PARTMENT']).first_or_404()
+
         # customer info
         mo = MemberOpenid.query.filter_by(access_token=data['X-ACCESS-TOKEN']).first_or_404()
         mo.nickname = data['nickname']
@@ -154,25 +158,47 @@ class OrderResource(BaseResource):
         order.note = data['note']
         order.shoppoint_id = shop.id
         order.shoppoint = shop
+        order.partment_id = partment.id
+        order.partment = partment
 
         # product info
         order.original_cost = 0
         order.cost = 0
         order.delivery_fee = 0 if data['delivery_way'] == 1 else 1000
         for p in data['products']: # TODO if the products code in data['products'] are duplicated, a db error will be occurred
-            product = Product.query.get_or_404(p['product']['id']) # filter_by(code=p['code']).first_or_404()
-            logger.debug('the product in order: %s', product)
+            product = Product.query.get_or_404(p['id']) # filter_by(code=p['code']).first_or_404()
             op = OrderProduct()
-            if promotion:
-                pp = PromotionProduct.query.get_or_404((promotion.id, product.id))
-                logger.debug('the product in promotion: %s', pp)
-                op.price = pp.price if pp.price else product.promote_price
-            else:
-                pp = None
-                op.price = product.price
+            if p['want_size'] > 0:
+                size = Size.query.get_or_404(p['want_size'])
+                op.size = size
+            logger.debug('the product in order: %s', product)
             op.order = order
             op.product = product
             op.amount = p['want_amount']
+
+            if promotion:
+                if p['want_size']:
+                    pp = PromotionProduct.query.filter_by(promotion_id=promotion.id, product_id=product.id, size_id=size.id).first_or_404()
+                    logger.debug('the product in promotion: %s', pp)
+                    ps = ProductSize.query.get_or_404((product.id, size.id))
+                    op.size_id = size.id
+                    op.size = size
+                    op.price = pp.price if pp.price else product.promote_price
+                    op.price += ps.promote_price_plus
+                    order.original_cost += op.amount * (product.price+ps.price_plus)
+                else:
+                    pp = PromotionProduct.query.filter_by(promotion_id=promotion.id, product_id=product.id).first_or_404()
+                    logger.debug('the product in promotion: %s', pp)
+                    op.price = pp.price if pp.price else product.promote_price
+                    order.original_cost += op.amount * product.price
+            else:
+                pp = None
+                if p['want_size']:
+                    ps = ProductSize.query.get_or_404((product.id, size.id))
+                    op.price = product.price + ps.price_plus
+                else:
+                    op.price = product.price
+                order.original_cost += op.amount * op.price
 
             #pp.sold += op.amount
             #pp.stock -= op.amount
@@ -182,7 +208,6 @@ class OrderResource(BaseResource):
             #product.promote_stock = -op.amount if not product.promote_stock else product.promote_stock - op.amount
             #product.stock = -op.amount if not product.stock else product.stock - op.amount
 
-            order.original_cost += op.amount * product.price
             order.cost += op.price * op.amount
             order.products.append(op)
             db.session.add(op)
@@ -199,8 +224,6 @@ class OrderResource(BaseResource):
         oa.address = addr.address
         order.address = oa
         db.session.add(oa)
-
-        partment = Partment.query.filter_by(shoppoint_id=shop.id, code=data['X-PARTMENT']).first_or_404()
 
         db.session.add(order)
         db.session.commit()
