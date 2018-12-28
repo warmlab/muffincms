@@ -11,7 +11,7 @@ from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, MESSAGES
 
 from ..models import db
 from ..models import Shoppoint, Product, ProductCategory
-from ..models import Image, ProductImage, ProductSize
+from ..models import Size, Image, ProductImage, ProductSize
 
 from .base import BaseResource
 from .image import image_fields
@@ -25,9 +25,33 @@ product_image_fields = {
     'image': fields.Nested(image_fields)
 }
 
-product_spec_fields = {
+size_fields = {
     'id': fields.Integer,
-    'name': fields.String
+    'name': fields.String,
+    'value': fields.Integer,
+    'spec': fields.String,
+    'shared_min': fields.Integer,
+    'shared_max': fields.Integer,
+    'utensils': fields.Integer,
+    'pre_order_hours': fields.Integer,
+    'banner': fields.String,
+    'price_plus': fields.Integer,
+    'member_price_plus': fields.Integer,
+    'promote_price_plus': fields.Integer,
+}
+
+product_size_fields = {
+#    'product': field.Nested(product_fields),
+    'size': fields.Nested(size_fields),
+    'index': fields.Integer,
+    'price_plus': fields.Integer,
+    'member_price_plus': fields.Integer,
+    'promote_price_plus': fields.Integer,
+    'stock': fields.Integer,
+    'promote_stock': fields.Integer,
+    'sold': fields.Integer,
+    'member_sold': fields.Integer,
+    'promote_sold': fields.Integer,
 }
 
 product_fields = {
@@ -49,7 +73,7 @@ product_fields = {
     'is_deleted': fields.Boolean,
     'category': fields.Nested(category_fields),
     'images': fields.List(fields.Nested(product_image_fields)),
-    'specs': fields.List(fields.Nested(product_spec_fields))
+    'sizes': fields.List(fields.Nested(product_size_fields))
 }
 
 class ProductResource(BaseResource):
@@ -92,9 +116,11 @@ class ProductResource(BaseResource):
         parser.add_argument('note', type=str)
         #parser.add_argument('banner', type=int)
         parser.add_argument('images', type=dict, action="append")
-        parser.add_argument('specs', type=dict, action="append")
+        #parser.add_argument('sizes', type=dict, action="append")
+        parser.add_argument('sizes', type=dict, action="append")
 
         data = parser.parse_args()
+        print(data)
 
         product = Product.query.filter_by(code=data['code'], is_deleted=False).first()
         if not product:
@@ -154,22 +180,24 @@ class ProductResource(BaseResource):
             pi.index = photo['index']
             product.images.append(pi)
 
-        """
-        #specifications
-        for s in product.specs:
-            db.session.delete(s)
-        product.specs = []
-        for spec in data['specs']:
-            ps = ProductSpec()
-            ps.product = product
-            #ps.product_id = product.id
-            ps.name = spec['name']
-            ps.price_plus = spec['price_plus']
-            ps.promote_price_plus = spec['promote_price_plus']
-            ps.stock = spec['stock']
-            ps.promote_stock = spec['promote_stock']
-            product.specs.append(ps)
-        """
+        # sizes
+        if category.extra_info and category.extra_info & 1: # size info
+            for ps in product.sizes:
+                db.session.delete(ps)
+            product.sizes = []
+            for s in data['sizes']:
+                size = Size.query.get_or_404(s['id'])
+                ps = ProductSize()
+                ps.product = product
+                ps.product_id = product.id
+                ps.size = size
+                ps.size_id = size.id
+                ps.price_plus = size.price_plus if s['price'] - product.price < 0 else s['price'] - product.price
+                ps.member_price_plus = size.member_price_plus if s['member_price'] - product.member_price < 0 else s['member_price'] - product.member_price
+                ps.promote_price_plus = size.promote_price_plus if s['promote_price'] - product.promote_price < 0 else s['promote_price'] - product.promote_price
+                #ps.stock = spec['stock']
+                #ps.promote_stock = spec['promote_stock']
+                product.sizes.append(ps)
 
         db.session.commit()
 
@@ -219,3 +247,11 @@ class ProductsResource(BaseResource):
                                             Product.is_deleted==False).all()
 
         return products
+
+class SizesResource(BaseResource):
+    @marshal_with(size_fields)
+    def get(self, shopcode):
+        shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
+        sizes = Size.query.filter(Size.shoppoint_id==shop.id).order_by(Size.index.asc()).all()
+
+        return sizes

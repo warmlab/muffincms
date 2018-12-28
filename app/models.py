@@ -160,7 +160,7 @@ class Product(db.Model):
     promotions = db.relationship('PromotionProduct', back_populates='product')
     orders = db.relationship('OrderProduct', back_populates='product')
     histories = db.relationship('HistoryProduct', back_populates='product')
-    sizes = db.relationship('ProductSize', back_populates='product', order_by='asc(ProductSize.index)')
+    sizes = db.relationship('ProductSize', back_populates='product', order_by='asc(ProductSize.product_id)')
 
     def __repr__(self):
         return self.name
@@ -181,10 +181,11 @@ class Size(db.Model):
     banner = db.Column(db.String(128)) # 该尺寸的图片
 
     price_plus = db.Column(db.Integer, default=0) # 在原价的基础上加上该价格
+    member_price_plus = db.Column(db.Integer, default=0) # 在会员价的基础上加上该价格
     promote_price_plus = db.Column(db.Integer, default=0) # 在促销价的基础上加上该价格
 
     shoppoint_id = db.Column(db.Integer, db.ForeignKey('shoppoint.id'), nullable=True)
-    shoppoint = db.relationship('Shoppoint', backref=db.backref('specs', lazy="dynamic"))
+    shoppoint = db.relationship('Shoppoint', backref=db.backref('sizes', lazy="dynamic"), order_by="asc(Size.index)")
 
     products = db.relationship('ProductSize', back_populates='size')
 
@@ -196,11 +197,13 @@ class ProductSize(db.Model): # 产品尺寸，一般用于蛋糕
     #name = db.Column(db.String(64)) # 规格, 如：80克-巧克力味
     index = db.Column(db.SmallInteger, default=0) # 在列表的顺序
     price_plus = db.Column(db.Integer, default=0) # 在原价的基础上加上该价格
+    member_price_plus = db.Column(db.Integer, default=0) # 在会员价的基础上加上该价格
     promote_price_plus = db.Column(db.Integer, default=0) # 在促销价的基础上加上该价格
     promote_stock = db.Column(db.Integer, default=0) # 参与促销的库存
     stock = db.Column(db.Integer, default=0) # 库存
-    promote_sold = db.Column(db.Integer, default=0) # 促销卖了多少
     sold = db.Column(db.Integer, default=0) # 一共卖了多少（包括促销部分）
+    member_sold = db.Column(db.Integer, default=0) # 会员价卖了多少（包括促销部分）
+    promote_sold = db.Column(db.Integer, default=0) # 促销卖了多少
 
     product = db.relationship('Product', back_populates='sizes')
     size = db.relationship('Size', back_populates='products')
@@ -266,8 +269,10 @@ class Promotion(db.Model):
 class PromotionProduct(db.Model):
     __tablename__ = 'promotion_product'
 
-    promotion_id = db.Column(db.Integer, db.ForeignKey('promotion.id'), primary_key=True)
-    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
+    promotion_id = db.Column(db.Integer, db.ForeignKey('promotion.id'))
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
+    size_id = db.Column(db.Integer, db.ForeignKey('size.id'))
     index = db.Column(db.Integer, default=1)# 商品在团购中的排序
     is_deleted = db.Column(db.Boolean, default=False) # 是否删除产品
 
@@ -277,15 +282,7 @@ class PromotionProduct(db.Model):
 
     product = db.relationship("Product", back_populates="promotions")
     promotion = db.relationship("Promotion", back_populates="products")
-
-    def next_index(self):
-        next_index = db.session.query(db.func.max(PromotionProduct.index)).filter_by(promotion_id=self.promotion_id).scalar()
-        if next_index:
-            next_index += 1
-        else:
-            next_index = 1
-
-        self.index = next_index
+    size = db.relationship("Size", backref=db.backref('orders', lazy='dynamic'))
 
 class PromotionAddress(db.Model):
     __tablename__ = 'promotion_address'
@@ -437,15 +434,18 @@ class OrderPayment(db.Model):
 class OrderProduct(db.Model):
     __tablename__ = 'order_product'
 
-    order_code = db.Column(db.String(32), db.ForeignKey('order.code'), primary_key=True)
-    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
+    order_code = db.Column(db.String(32), db.ForeignKey('order.code'))
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
+    size_id = db.Column(db.Integer, db.ForeignKey('size.id'))
 
     price = db.Column(db.Integer, default=0) # 商品在该订单中实际支付的价格
     amount = db.Column(db.Integer, default=0) # 该订单中产品的数量
     refund = db.Column(db.Integer, default=0) # 该商品退款金额
 
-    product = db.relationship("Product", back_populates="orders")
     order = db.relationship("Order", back_populates="products")
+    product = db.relationship("Product", back_populates="orders")
+    size = db.relationship("Size", backref=db.backref('order_products', lazy='dynamic'))
 
 class OrderAddress(db.Model):
     __tablename__ = 'order_address'
@@ -582,14 +582,17 @@ class History(db.Model):
 class HistoryProduct(db.Model):
     __tablename__ = 'history_product'
 
-    history_id = db.Column(db.Integer, db.ForeignKey('history.id'), primary_key=True)
-    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
+    history_id = db.Column(db.Integer, db.ForeignKey('history.id'))
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
+    size_id = db.Column(db.Integer, db.ForeignKey('size.id'))
 
     price = db.Column(db.Integer, default=0) # 商品在该订单中实际支付的价格
     refund = db.Column(db.Integer, default=0) # 该商品退款金额
 
     product = db.relationship("Product", back_populates="histories")
     history = db.relationship("History", back_populates="products")
+    size = db.relationship("Size", backref=db.backref('history_products', lazy='dynamic'))
 
 # History:Address=1:N
 class HistoryAddress(db.Model):

@@ -14,7 +14,7 @@ from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, MESSAGES
 from ..models import db
 from ..models import Promotion, PromotionProduct, PromotionAddress
 from ..models import Product, Shoppoint, PickupAddress
-from ..models import Order
+from ..models import Order, Size
 
 from .product import product_fields
 from .address import address_fields
@@ -139,16 +139,30 @@ class PromotionResource(BaseResource):
             promotion.publish_time = datetime.strptime(' '.join([data['publish_date'], data['publish_time']]), '%Y-%m-%d %H:%M')
         if promotion.products:
             PromotionProduct.query.filter_by(promotion_id=promotion.id).update({'is_deleted': True})
+        # get max index from db
+        max_index = db.session.query(db.func.max(PromotionProduct.index)).filter_by(promotion_id=promotion.id).scalar()
+        if max_index is None: max_index = 0
         for index, p in enumerate(data['products']):
             product = Product.query.filter_by(code=p['code']).first_or_404()
-            pp = PromotionProduct.query.get((promotion.id, product.id))
-            if not pp:
-                pp = PromotionProduct()
-                pp.product = product
-                pp.promotion = promotion
-                promotion.products.append(pp)
-                #db.session.add(pp)
-            pp.index = index + 1
+            if product.category.extra_info and product.category.extra_info & 1 == 1:
+                size = Size.query.get_or_404(p['size'])
+                pp = PromotionProduct.query.filter_by(promotion_id=promotion.id, product_id=product.id, size_id=size.id).first()
+                if not pp:
+                    pp = PromotionProduct()
+                    pp.size = size
+                    pp.size_id = size.id
+            else:
+                pp = PromotionProduct.query.filter_by(promotion_id=promotion.id, product_id=product.id).first()
+                if not pp:
+                    pp = PromotionProduct()
+
+            pp.product = product
+            pp.promotion = promotion
+            promotion.products.append(pp)
+            #db.session.add(pp)
+            pp.index = max_index + index + 1
+            if p['size'] > 0:
+                pp.size_id = pp.size.id
             pp.is_deleted = False
             if p['price']:
                 pp.price = p['price']

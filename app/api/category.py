@@ -21,6 +21,7 @@ category_fields = {
     'name': fields.String,
     'english_name': fields.String,
     'slug': fields.String,
+    'extra_info': fields.Integer,
     'web_allowed': WebAllowedField(attribute='show_allowed'),
     'pos_allowed': POSAllowedField(attribute='show_allowed'),
     'promote_allowed': PromoteAllowedField(attribute='show_allowed'),
