@@ -40,7 +40,7 @@ class CategoriesResource(BaseResource):
         #    logger.error('no code argument in request')
         #    abort(400, status=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'product code')
         shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
-        categories = ProductCategory.query.filter_by(shoppoint_id=shop.id).all()
+        categories = ProductCategory.query.filter_by(shoppoint_id=shop.id).order_by(ProductCategory.index).all()
         if not categories:
             logger.warning(MESSAGES[STATUS_NO_RESOURCE])
             abort(404, status=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE])

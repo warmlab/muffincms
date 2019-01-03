@@ -144,7 +144,7 @@ class PromotionResource(BaseResource):
         if max_index is None: max_index = 0
         for index, p in enumerate(data['products']):
             product = Product.query.filter_by(code=p['code']).first_or_404()
-            if product.category.extra_info and product.category.extra_info & 1 == 1:
+            if product.category and product.category.extra_info and product.category.extra_info & 1 == 1 and 'size' in p:
                 size = Size.query.get_or_404(p['size'])
                 pp = PromotionProduct.query.filter_by(promotion_id=promotion.id, product_id=product.id, size_id=size.id).first()
                 if not pp:
@@ -161,7 +161,7 @@ class PromotionResource(BaseResource):
             promotion.products.append(pp)
             #db.session.add(pp)
             pp.index = max_index + index + 1
-            if p['size'] > 0:
+            if 'size' in p and p['size'] > 0:
                 pp.size_id = pp.size.id
             pp.is_deleted = False
             if p['price']:
