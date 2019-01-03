@@ -166,9 +166,9 @@ class OrderResource(BaseResource):
         order.cost = 0
         order.delivery_fee = 0 if data['delivery_way'] == 1 else 1000
         for p in data['products']: # TODO if the products code in data['products'] are duplicated, a db error will be occurred
-            product = Product.query.get_or_404(p['product']['id']) # filter_by(code=p['code']).first_or_404()
+            product = Product.query.get_or_404(p['id']) # filter_by(code=p['code']).first_or_404()
             op = OrderProduct()
-            if 'want_size' in p and  p['want_size'] > 0:
+            if p['want_size'] > 0:
                 size = Size.query.get_or_404(p['want_size'])
                 op.size = size
             logger.debug('the product in order: %s', product)
@@ -177,7 +177,7 @@ class OrderResource(BaseResource):
             op.amount = p['want_amount']
 
             if promotion:
-                if 'want_size' in p and p['want_size']:
+                if p['want_size'] > 0:
                     pp = PromotionProduct.query.filter_by(promotion_id=promotion.id, product_id=product.id, size_id=size.id).first_or_404()
                     logger.debug('the product in promotion: %s', pp)
                     ps = ProductSize.query.get_or_404((product.id, size.id))

@@ -1,4 +1,4 @@
-pycrypt>=0.7
+pycrypto>=2.6
 psycopg2-binary>=2.7
 itsdangerous>=1.1
 sqlalchemy>=1.2

@@ -16,7 +16,7 @@ from ..models import Promotion, PromotionProduct, PromotionAddress
 from ..models import Product, Shoppoint, PickupAddress
 from ..models import Order, Size
 
-from .product import product_fields
+from .product import product_fields, size_fields
 from .address import address_fields
 from .order import order_fields
 from .base import BaseResource
@@ -30,6 +30,7 @@ promotion_product_fields = {
     'sold': fields.Integer,
     'stock': fields.Integer,
     'product': fields.Nested(product_fields),
+    'size': fields.Nested(size_fields),
     'is_deleted': fields.Boolean
 }
 
@@ -143,8 +144,8 @@ class PromotionResource(BaseResource):
         max_index = db.session.query(db.func.max(PromotionProduct.index)).filter_by(promotion_id=promotion.id).scalar()
         if max_index is None: max_index = 0
         for index, p in enumerate(data['products']):
-            product = Product.query.filter_by(code=p['code']).first_or_404()
-            if product.category and product.category.extra_info and product.category.extra_info & 1 == 1 and 'size' in p:
+            product = Product.query.get_or_404(p['id'])
+            if product.category and product.category.extra_info and product.category.extra_info & 1 == 1:
                 size = Size.query.get_or_404(p['size'])
                 pp = PromotionProduct.query.filter_by(promotion_id=promotion.id, product_id=product.id, size_id=size.id).first()
                 if not pp:
@@ -161,13 +162,13 @@ class PromotionResource(BaseResource):
             promotion.products.append(pp)
             #db.session.add(pp)
             pp.index = max_index + index + 1
-            if 'size' in p and p['size'] > 0:
-                pp.size_id = pp.size.id
+            #if p['size'] > 0:
+            #    pp.size_id = pp.size.id
             pp.is_deleted = False
             if p['price']:
                 pp.price = p['price']
             else:
-                pp.price = product.promote_price
+                pp.price = product.promote_price + (size.promote_price_plus if p['size'] else 0)
             if p['stock']:
                 pp.stock = p['stock']
             else:
