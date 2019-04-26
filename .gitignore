@@ -103,3 +103,6 @@ migrations/
 
 # mypy
 .mypy_cache/
+
+*.bak
+*.swp

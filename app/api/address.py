@@ -18,6 +18,9 @@ address_fields = {
     'id': fields.Integer,
     'contact': fields.String,
     'phone': fields.String,
+    'province': fields.String,
+    'city': fields.String,
+    'district': fields.String,
     'address': fields.String,
     'checked': fields.Boolean,
     'day': fields.Integer,
@@ -30,8 +33,8 @@ class AddressResource(BaseResource):
     @marshal_with(address_fields)
     def get(self, shopcode):
         parser = RequestParser()
-        parser.add_argument('code', type=int, help='pickup address code should be required')
-        args = parser.parse_args(strict=True)
+        parser.add_argument('code', type=int, location='args', help='pickup address code should be required')
+        args = parser.parse_args()
         logger.debug('GET request args: %s', args)
         if not args['code']:
             logger.error('no code argument in request')
@@ -50,6 +53,9 @@ class AddressResource(BaseResource):
         parser.add_argument('code', type=int)
         parser.add_argument('contact', type=str)
         parser.add_argument('phone', type=str)
+        parser.add_argument('province', type=str, required=True, help='province must be required')
+        parser.add_argument('city', type=str, required=True, help='city must be required')
+        parser.add_argument('district', type=str, required=True, help='district must be required')
         parser.add_argument('address', type=str, required=True, help='address must be required')
         parser.add_argument('checked', type=bool)
         parser.add_argument('day', type=int)

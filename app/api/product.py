@@ -21,6 +21,7 @@ from .field import WebAllowedField, POSAllowedField, PromoteAllowedField
 
 product_image_fields = {
     'index': fields.Integer,
+    'type': fields.Integer,
     'note': fields.String,
     'image': fields.Nested(image_fields)
 }
@@ -98,6 +99,7 @@ class ProductResource(BaseResource):
 
     @marshal_with(product_fields)
     def post(self, shopcode):
+        print('aaa', request.data)
         is_new_product = False
         shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
         parser = RequestParser()
@@ -116,6 +118,7 @@ class ProductResource(BaseResource):
         parser.add_argument('note', type=str)
         #parser.add_argument('banner', type=int)
         parser.add_argument('images', type=dict, action="append")
+        parser.add_argument('to_remove_images', type=dict, action="append")
         #parser.add_argument('sizes', type=dict, action="append")
         parser.add_argument('sizes', type=dict, action="append")
 
@@ -152,32 +155,47 @@ class ProductResource(BaseResource):
         product.category = category
 
         logger.debug(data)
-
-        for i in product.images:
-            db.session.delete(i)
-        product.images = []
+        # remove image not needed
+        if data['to_remove_images']:
+          for photo in data['to_remove_images']:
+            image = Image.query.get(photo['id'])
+            if image:
+              pi = ProductImage.query.get((product.id, image.id))
+              if pi.type & photo['type'] == photo['type']:
+                if pi.type > photo['type']:
+                  pi.type &= ~photo['type']
+                else:
+                  db.session.delete(pi)
 
         #photos = [{'code': data['banner'], 'index': 0}]
         #photos.extend(data['images'])
         photo_ids = []
-        for photo in data['images']:
-            if photo['id'] in photo_ids:
-                continue # 发现重复照片，跳过即可
-            else:
-                photo_ids.append(photo['id'])
+        if data['images']:
+          base_banner_index = db.session.query(db.func.max(ProductImage.index)).filter_by(product_id=product.id, type=1).scalar()
+          base_detail_index = db.session.query(db.func.max(ProductImage.index)).filter_by(product_id=product.id, type=2).scalar()
+          if base_banner_index is None: base_banner_index = 0
+          if base_detail_index is None: base_detail_index = 0
+          for photo in data['images']:
+            photo_ids.append(photo['id'])
             image = Image.query.get_or_404(photo['id'])
             #pi = None
             #if not is_new_product:
             #    pi = ProductImage.query.get((product.id, image.id))
             #if not pi:
-            pi = ProductImage()
+            pi = ProductImage.query.get((product.id, image.id))
+            if not pi:
+              pi = ProductImage()
+              pi.type = photo['type']
+              db.session.add(pi)
             pi.product_id = product.id
             pi.image_id = image.id
             pi.product = product
             pi.image = image
-            db.session.add(pi)
 
-            pi.index = photo['index']
+            if photo['type'] == 1:
+              pi.index = photo['index'] + base_banner_index
+            elif photo['type'] == 2:
+              pi.index = photo['index'] + base_detail_index
             product.images.append(pi)
 
         # sizes

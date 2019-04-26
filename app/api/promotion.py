@@ -44,6 +44,7 @@ promotion_fields = {
     'binding': fields.Boolean,
     'paymode': fields.Integer,
     'valuecard_allowed': fields.Boolean,
+    'payment': fields.Integer,
     'delivery_way': fields.Integer,
     'delivery_fee': fields.Integer,
     'last_order_time': DateTimeField('%Y-%m-%d %H:%M'),
@@ -54,6 +55,7 @@ promotion_fields = {
 
     'products': fields.List(fields.Nested(promotion_product_fields)),
     'addresses': fields.List(fields.Nested(promotion_address_fields)),
+    'status': fields.Integer,
     #'orders': fields.List(fields.Nested(order_fields)) # 参团数量多的话，直接影响页面加载速度
 }
 
@@ -89,8 +91,9 @@ class PromotionResource(BaseResource):
         parser.add_argument('id', type=int)
         parser.add_argument('name', type=str)
         parser.add_argument('binding', type=bool)
-        parser.add_argument('valuecard_allowed', type=bool)
-        parser.add_argument('paymode', type=int)
+        #parser.add_argument('valuecard_allowed', type=bool)
+        #parser.add_argument('paymode', type=int)
+        parser.add_argument('payment', type=int)
         parser.add_argument('delivery_fee', type=int)
         parser.add_argument('delivery_way', type=int)
         parser.add_argument('last_order_date', type=str, required=True, help='last order date should be required')
@@ -123,8 +126,9 @@ class PromotionResource(BaseResource):
 
         promotion.name = data['name']
         promotion.binding = data['binding']
-        promotion.paymode = data['paymode']
-        promotion.valuecard_allowed = data['valuecard_allowed']
+        #promotion.paymode = data['paymode']
+        promotion.payment = data['payment']
+        #promotion.valuecard_allowed = data['valuecard_allowed']
         promotion.delivery_way = data['delivery_way']
         promotion.delivery_fee = 0 if promotion.delivery_way == 1 else data['delivery_fee']
         promotion.last_order_time = datetime.strptime(' '.join([data['last_order_date'], data['last_order_time']]), '%Y-%m-%d %H:%M')

@@ -22,9 +22,10 @@ from .base import BaseResource
 image_fields = {
     'id': fields.Integer,
     'name': fields.String,
+    'type': fields.Integer,
     #'hash_value': fields.String,
     'title': fields.String,
-    'note': fields.String,
+    'note': fields.String
 }
 
 def generate_filename(filename):
@@ -62,6 +63,7 @@ class ImageResource(BaseResource):
 
         parser = RequestParser()
         parser.add_argument('upload-files', type=FileStorage, location='files', action="append", required=True, help='the upload files should be required')
+        parser.add_argument('type', type=int)
         args = parser.parse_args()
 
         images = []
@@ -78,6 +80,7 @@ class ImageResource(BaseResource):
                 image = Image()
                 image.hash_value = hash_value
                 image.name = filename
+                image.type = args['type']
                 image.shoppoint_id = shop.id
                 image.shoppoint = shop
 
@@ -85,5 +88,7 @@ class ImageResource(BaseResource):
 
                 db.session.add(image)
                 db.session.commit()
+            else:
+              image.type = args['type']
             images.append(image)
         return images

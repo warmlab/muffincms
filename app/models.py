@@ -233,7 +233,7 @@ class ProductImage(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), primary_key=True)
     image_id = db.Column(db.Integer, db.ForeignKey('image.id'), primary_key=True)
     index = db.Column(db.Integer, default=1) # 做为封面的图片，index为0, 其余为1或者排序
-    type = db.Column(db.Integer, default=0) # 1-banner, 0-detail
+    type = db.Column(db.Integer, default=1) # 1-banner, 2-detail
     note = db.Column(db.Text) # 产品图片描述
 
     product = db.relationship("Product", back_populates="images")
@@ -245,15 +245,17 @@ class Promotion(db.Model):
     name = db.Column(db.String(64)) # used in weixin
     binding = db.Column(db.Boolean, default=True) # true-捆绑销售
     paymode = db.Column(db.SmallInteger, default=0) # 0-预先支付; 1-货到付款
-    valuecard_allowed = db.Column(db.Boolean, default=True) # true-允许使用储值卡支付
+    #valuecard_allowed = db.Column(db.Boolean, default=True) # true-允许使用储值卡支付
+    payment = db.Column(db.Integer, default=14) # 1-现金支付 2-储值卡支付 4-微信支付 8-支付宝支付
     delivery_way = db.Column(db.SmallInteger, default=1) # 交付方式(按位与)，1-自提；2-快递; 4-不允许快递
     delivery_fee = db.Column(db.Integer, default=1000) # 最低基础运费
-    delivery_threshold = db.Column(db.Integer, default=8800) # 免邮金额
+    delivery_threshold = db.Column(db.Integer, default=9900) # 免邮金额
     last_order_time = db.Column(db.DateTime, default=datetime.now, nullable=False) # 截单时间
     from_time = db.Column(db.DateTime, default=datetime.now, nullable=False) # 取货开始时间
     to_time = db.Column(db.DateTime, default=datetime.now, nullable=False) # 取货结束时间
     publish_time = db.Column(db.DateTime, default=datetime.now) # 发布时间
     is_deleted = db.Column(db.Boolean, default=False) # 删除标志
+    status = db.Column(db.Integer, default=1) # 状态标志
     
     note = db.Column(db.Text) # 详细描述
 
@@ -299,7 +301,12 @@ class PickupAddress(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     contact = db.Column(db.String(32))
     phone = db.Column(db.String(12))
+    province = db.Column(db.String(32))
+    city = db.Column(db.String(32))
+    district = db.Column(db.String(32))
     address = db.Column(db.String(512))
+    longitude = db.Column(db.Numeric(10, 7)) # 经度
+    latitude = db.Column(db.Numeric(10, 7)) # 纬度
     checked = db.Column(db.Boolean, default=False)
     day = db.Column(db.Integer, default=0) # 32位标示31天, 为1的位表示不营业
     weekday = db.Column(db.SmallInteger, default=0) # 用其中的7位标识一周
