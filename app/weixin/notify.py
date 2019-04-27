@@ -23,15 +23,15 @@ def notify_admins(order, shoppoint_id):
     if not web:
         return
     # 提醒接龙发起者有新订单了
-    products = ['x'.join([p.product.name, str(p.amount)]) for p in order.products]
+    products = ['x'.join([p.product.name + ('' if not p.size else '['+p.size.name+']'), str(p.amount)]) for p in order.products]
 
     promotion = order.promotion
     if promotion:
         first = promotion.name + '-拼团编号: ' + str(order.index)
-        url = 'http://wecakes.com/admin/promotion/orders?promotion=' + str(promotion.id) + '&order=' + order.code
+        url = 'https://wecakes.com/admin/promotion/orders?promotion=' + str(promotion.id) + '&order=' + order.code
     else:
         first = '商城订单: ' + order.code
-        url = 'http://wecakes.com/admin/orders?order=' + order.code
+        url = 'https://wecakes.com/admin/orders?order=' + order.code
 
     data = {
             "first": {
@@ -60,8 +60,6 @@ def notify_admins(order, shoppoint_id):
 
     staffs = Staff.query.filter(Staff.shoppoint_id==shoppoint_id, Staff.privilege.op('&')(1)==1).all()
     for staff in staffs:
-    #for u in ('ox4bxso53hocK9iyC-eKNll-qRoI',
-    #        'ox4bxsnBj7xpsSndE4TOg_LY-IKQ', 'ox4bxsjScfpMhLESnt4AziP5ByuI'):
         j = {
             'template_id': 'pkl-0GTnDHxthXtR381PPNAooBT1JwUYuuP-YK1nRSA',
             'touser': staff.openid,
@@ -73,7 +71,7 @@ def notify_admins(order, shoppoint_id):
 
         logger.debug('notify admin result: %s', result)
 
-def notify_customer(order, partment, form_id):
+def notify_promotion_customer(order, form_id):
     # 提醒顾客订单已经付款
     data = {
         "keyword1": {
@@ -86,10 +84,11 @@ def notify_customer(order, partment, form_id):
             "value": '￥' + str(order.cost/100)
             },
         "keyword4":{
-            "value": ' '.join(["x".join([p.product.name, str(p.amount)]) for p in order.products])
+            #"value": ' '.join(["x".join([p.product.name, str(p.amount)]) for p in order.products])
+            "value": ' '.join(['x'.join([p.product.name + ('' if not p.size else '['+p.size.name+']'), str(p.amount)]) for p in order.products])
             },
         "keyword5":{
-            "value": "自提" if order.address.delivery_way == 1 else "快递: 运费 ￥" + str(order.delivery_fee/100)
+            "value": "自提" if order.address.delivery_way == 1 else "快递 -- 运费:￥" + str(order.delivery_fee/100)
             },
         "keyword6":{
             "value": '-'.join([order.address.name, order.address.phone])
@@ -107,7 +106,7 @@ def notify_customer(order, partment, form_id):
             "value": '如有疑问，可以拨打客服电话: 13370836021，服务时间：9:00~19:00'
             }
     }
-    j = {
+    return {
         'template_id': 'pRZaMpRAWQLuyFVtGXaWQBbsJ7ECHjPBKAWRCUBRfps',
         'touser': order.openid,
         'form_id': form_id,
@@ -115,6 +114,51 @@ def notify_customer(order, partment, form_id):
         'data': data,
         'emphasis_keyword': 'keyword1.DATA'
         }
+
+def notify_shop_customer(order, form_id):
+    # 提醒顾客订单已经付款
+    data = {
+        "keyword1": {
+            "value": order.code
+            },
+        "keyword2": {
+            "value": order.pay_time.strftime('%Y-%m-%d %H:%M:%S') if order.pay_time else ''
+            },
+        "keyword3":{
+            #"value": ' '.join(["x".join([p.product.name, str(p.amount)]) for p in order.products])
+            "value": ' '.join(['x'.join([p.product.name + ('' if not p.size else '['+p.size.name+']'), str(p.amount)]) for p in order.products])
+            },
+        "keyword4":{
+            "value": '￥' + str((order.cost+order.delivery_fee)/100)
+            },
+        "keyword5":{
+            "value": "自提" if order.address.delivery_way == 1 else "快递 -- 运费:￥" + str(order.delivery_fee/100)
+            },
+        "keyword6":{
+            "value": '-'.join([order.address.name, order.address.phone, order.address.address])
+            },
+        "keyword7":{
+            "value": '如有疑问，可以拨打客服电话: 13370836021，服务时间：9:00~19:00'
+            },
+        "keyword8":{
+            "value": order.note
+            },
+    }
+    return {
+        'template_id': 'x61QivvlgTGlNGuKDX8lYprf1EbgLw8Vv6MneCHSEmw',
+        'touser': order.openid,
+        'form_id': form_id,
+        #'url':  url_for('shop.payresult', _external=True, ticket_code=order.code),
+        'data': data,
+        'emphasis_keyword': 'keyword4.DATA'
+        }
+
+
+def notify_customer(order, partment, form_id):
+    if order.promotion:
+        j = notify_promotion_customer(order, form_id)
+    else:
+        j = notify_shop_customer(order, form_id)
+
     body = json.dumps(j)
     access_weixin_api('https://api.weixin.qq.com/cgi-bin/message/wxopen/template/send', body, access_token=partment.get_access_token())
-

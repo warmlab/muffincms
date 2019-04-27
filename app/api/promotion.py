@@ -252,14 +252,17 @@ class PromotionsResource(BaseResource):
     def get(self, shopcode):
         parser = RequestParser()
         parser.add_argument('manage', type=bool, location='args')
+        parser.add_argument('limit', type=int, location='args')
         # parser.add_argument('date', type=lambda x: datetime.strptime(x,'%Y-%m-%dT%H:%M:%S'))
         args = parser.parse_args()
         logger.debug('GET request args: %s', args)
         shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
+        if not args['limit']:
+            args['limit'] = 10
         if args['manage']:
-            promotions = Promotion.query.filter_by(shoppoint_id=shop.id, is_deleted=False).order_by(Promotion.last_order_time.desc()).all()
+            promotions = Promotion.query.filter_by(shoppoint_id=shop.id, is_deleted=False).order_by(Promotion.last_order_time.desc()).limit(args['limit']).all()
         else:
-            promotions = Promotion.query.filter(Promotion.shoppoint_id==shop.id, Promotion.is_deleted==False, Promotion.to_time>datetime.now()).order_by(Promotion.last_order_time.desc()).all()
+            promotions = Promotion.query.filter(Promotion.shoppoint_id==shop.id, Promotion.is_deleted==False, Promotion.to_time>datetime.now()).order_by(Promotion.last_order_time.desc()).limit(args['limit']).all()
 
         return promotions
 

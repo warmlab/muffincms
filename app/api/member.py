@@ -44,14 +44,12 @@ openid_fields = {
 class LoginResource(Resource):
     @marshal_with(openid_fields)
     def post(self, shopcode):
-        print(request.data)
         shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
         parser = RequestParser()
         parser.add_argument('X-PARTMENT', type=str, required=True, location='headers', help='partment code must be required')
         parser.add_argument('code', type=str, required=True, help='member login code must be required')
         #parser.add_argument('session_key', type=str, help='member session_key must be required')
         args = parser.parse_args()
-        print(args)
 
         if not args['code'] or not args['X-PARTMENT']:
             logger.error('no code and partment argument in request')

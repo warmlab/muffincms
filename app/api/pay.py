@@ -62,6 +62,7 @@ class PayResource(BaseResource):
             if not order.prepay_id or not order.prepay_id_expires or order.prepay_id_expires < int(time()):
                 # invoke the unified order interface of WeChat
                 result = unified_order(order, partment.appid, partment.mchid, partment.paysecret, order.openid, url_for('payment.notify', shopcode=shop.code, partcode=partment.code, _external=True), shop.code)
+                print('aaaaaaa', result)
                 if result['return_code'] == 'SUCCESS' and result['result_code'] == 'SUCCESS':
                     order.prepay_id = result['prepay_id']
                     order.prepay_id_expires = int(time()) + 7200 - 10 # prepay_id的过期时间是2小时
@@ -75,6 +76,7 @@ class PayResource(BaseResource):
                             order.address.phone = order.member_openid.phone
 
             # to generate parameters for wx.requestPayment
+            print(order.code, order.prepay_id)
             payment_info = {
                 'appId': partment.appid,
                 'timeStamp': str(int(time())),

@@ -24,6 +24,7 @@ def authenticate(func):
         parser.add_argument('X-PARTMENT', type=str, location='headers', required=True, help='partment code must be required')
         parser.add_argument('X-VERSION', type=str, location='headers')
 
+
         data = parser.parse_args()
         if not data['X-ACCESS-TOKEN'] or not data['X-VERSION'] or not data['X-SHOPPOINT']:
             abort(400, status=STATUS_NO_REQUIRED_HEADERS, message=MESSAGES[STATUS_NO_REQUIRED_HEADERS])
