@@ -107,6 +107,7 @@ class PromotionResource(BaseResource):
         parser.add_argument('publish_time', type=str)
         parser.add_argument('note', type=str)
         parser.add_argument('products', type=dict, action='append', required=True, help='product information should be required')
+        parser.add_argument('to_remove', type=dict, action='append')
         parser.add_argument('addresses', type=int, action='append', required=True, help='pickup address information should be required')
 
         data = parser.parse_args()
@@ -147,6 +148,12 @@ class PromotionResource(BaseResource):
         # get max index from db
         max_index = db.session.query(db.func.max(PromotionProduct.index)).filter_by(promotion_id=promotion.id).scalar()
         if max_index is None: max_index = 0
+        if data['to_remove']:
+          for p in data['to_remove']:
+            product = Product.query.get_or_404(p['id'])
+            pp = PromotionProduct.query.filter_by(promotion_id=promotion.id, product_id=product.id).first()
+            if pp:
+              pp.is_deleted = True
         for index, p in enumerate(data['products']):
             product = Product.query.get_or_404(p['id'])
             if product.category and product.category.extra_info and product.category.extra_info & 1 == 1:
@@ -156,10 +163,14 @@ class PromotionResource(BaseResource):
                     pp = PromotionProduct()
                     pp.size = size
                     pp.size_id = size.id
+                else:
+                  pp.is_deleted = False  
             else:
                 pp = PromotionProduct.query.filter_by(promotion_id=promotion.id, product_id=product.id).first()
                 if not pp:
                     pp = PromotionProduct()
+                else:
+                  pp.is_deleted = False  
 
             pp.product = product
             pp.promotion = promotion
@@ -169,10 +180,10 @@ class PromotionResource(BaseResource):
             #if p['size'] > 0:
             #    pp.size_id = pp.size.id
             pp.is_deleted = False
-            if p['price']:
-                pp.price = p['price']
-            else:
-                pp.price = product.promote_price + (size.promote_price_plus if p['size'] else 0)
+            #if p['price']:
+            #    pp.price = p['price']
+            #else:
+            pp.price = product.promote_price + (size.promote_price_plus if p['size'] else 0)
             if p['stock']:
                 pp.stock = p['stock']
             else:
