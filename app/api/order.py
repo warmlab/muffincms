@@ -59,7 +59,7 @@ order_fields = {
     'refund_delivery_fee': fields.Integer,
     'mode': fields.Integer,
     'payment': fields.Integer,
-    'valuecard_allowed': fields.Boolean,
+    #'valuecard_allowed': fields.Boolean,
     'bonus_balance': fields.Integer,
     'prepay_id': fields.String,
     'order_time': DateTimeField(dt_format='%Y-%m-%d %H:%M:%S'),
@@ -129,6 +129,7 @@ class OrderResource(BaseResource):
                 order.promotion_id = promotion.id
                 order.openid = mo.openid
                 order.member_openid = mo
+                order.payment = promotion.payment
                 db.session.add(order)
             else:
                 # delete order address and order products
@@ -137,10 +138,12 @@ class OrderResource(BaseResource):
                 for p in order.products:
                     db.session.delete(p) 
                 order.address = None
+                order.payment = promotion.payment
                 db.session.commit()
         else:
             order = Order()
             order.openid = mo.openid
+            order.payment = 14
             order.member_openid = mo
             db.session.add(order)
 
@@ -154,7 +157,7 @@ class OrderResource(BaseResource):
         #order.openid = mo.openid
         #order.payment = data['payment']
         order.mode = 0
-        order.valuecard_allowed = promotion.valuecard_allowed if promotion else True
+        #order.valuecard_allowed = promotion.valuecard_allowed if promotion else True
         order.note = data['note']
         order.shoppoint_id = shop.id
         order.shoppoint = shop

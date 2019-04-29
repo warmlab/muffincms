@@ -349,7 +349,7 @@ class Order(db.Model):
     refund_delivery_fee = db.Column(db.Integer, default=0) # 已退订单运费
 
     mode = db.Column(db.SmallInteger, default=0) # 0-消费, 1-充值, 2-退货, 3-反结账, 4-退卡
-    valuecard_allowed = db.Column(db.Boolean, default=True) # true-允许使用储值卡支付
+    #valuecard_allowed = db.Column(db.Boolean, default=True) # true-允许使用储值卡支付
     payment = db.Column(db.Integer, default=0) # 支付方式
     bonus_balance = db.Column(db.Integer, default=0) # 赠送金额，充值的时候会产生赠送金额
 
