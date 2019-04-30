@@ -247,6 +247,8 @@ class ProductsResource(BaseResource):
     def get(self, shopcode):
         parser = RequestParser()
         parser.add_argument('type', type=int, location='args', required=True, help='terminal type should be required')
+        parser.add_argument('sort', type=str, location='args')
+        parser.add_argument('limit', type=int, location='args')
         parser.add_argument('category', type=int, location='args')
         data = parser.parse_args()
 
@@ -256,13 +258,29 @@ class ProductsResource(BaseResource):
             category = ProductCategory.query.get_or_404(data['category'])
             products = Product.query.filter(Product.shoppoint_id==shop.id,
                                             Product.category_id==category.id,
+                                            Product.stock > 0,
                                             Product.show_allowed.op('&')(data['type'])>0,
-                                            Product.is_deleted==False).all()
+                                            Product.is_deleted==False)
 
         else:
+          if data['sort'] == 'popular':
             products = Product.query.filter(Product.shoppoint_id==shop.id,
+                                            Product.stock > 0,
                                             Product.show_allowed.op('&')(data['type'])>0,
-                                            Product.is_deleted==False).all()
+                                            Product.is_deleted==False)
+          else:
+            products = Product.query.filter(Product.shoppoint_id==shop.id,
+                                            Product.stock > 0,
+                                            Product.show_allowed.op('&')(data['type'])>0,
+                                            Product.is_deleted==False)
+
+
+        if data['sort'] == 'popular':
+          products = products.order_by(Product.sold.desc())
+        if data['limit']:
+          products = products.limit(data['limit']).all()
+        else:
+          products = products.all()
 
         return products
 
