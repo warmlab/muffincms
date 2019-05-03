@@ -10,7 +10,7 @@ from ..logging import logger
 from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, MESSAGES
 
 from ..models import db
-from ..models import Shoppoint, Product, ProductCategory
+from ..models import Shoppoint, Product, ProductCategory, Member
 from ..models import Size, Image, ProductImage, ProductSize
 
 from .base import BaseResource
