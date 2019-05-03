@@ -4,6 +4,7 @@ from flask_restful import Api
 from .promotion import PromotionResource, PromotionsResource, PromotionOrdersResource
 from .image import ImageResource
 from .product import ProductResource, ProductsResource, SizesResource
+from .qrcode import QRCodeResource
 from .order import OrderResource, OrdersResource
 from .member import LoginResource, OpenidResource, OpenidAddressResource, OpenidAddressesResource, TokenCheckerResource, DecryptResource
 from .address import AddressResource, AddressesResource
@@ -21,6 +22,7 @@ api.add_resource(PromotionsResource, '/promotions', endpoint='promotions_ep')
 api.add_resource(ImageResource, '/image')
 api.add_resource(CategoriesResource, '/categories')
 api.add_resource(ProductResource, '/product')
+api.add_resource(QRCodeResource, '/qrcode')
 api.add_resource(ProductsResource, '/products')
 api.add_resource(SizesResource, '/product/sizes')
 api.add_resource(OrderResource, '/order')
