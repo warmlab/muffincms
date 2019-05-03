@@ -161,7 +161,7 @@ class ProductResource(BaseResource):
             image = Image.query.get(photo['id'])
             if image:
               pi = ProductImage.query.get((product.id, image.id))
-              if pi.type & photo['type'] == photo['type']:
+              if pi.type & photo['type'] == photo['type'] or pi.type == 0:
                 if pi.type > photo['type']:
                   pi.type &= ~photo['type']
                 else:
