@@ -49,9 +49,9 @@ class QRCodeResource(BaseResource):
                 os.mkdir(base_path)
             except Exception as e:
                 pass
-            file_path = os.path.join(base_path, product.code)+'.jpeg'
+            file_path = os.path.join(base_path, str(product.id))+'.jpeg'
             image = open(file_path, 'wb')
             image.write(result)
             image.close()
 
-            return {'qr_image_path': user.openid + '/' + product.code + '.jpeg'}
+            return {'qr_image_path': user.openid + '/' + str(product.id) + '.jpeg'}
