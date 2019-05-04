@@ -24,7 +24,12 @@ address_fields = {
     'id': fields.Integer,
     'contact': fields.String,
     'phone': fields.String,
+    'province': fields.String,
+    'city': fields.String,
+    'district': fields.String,
     'address': fields.String,
+    #'longitude': fields.String,
+    #'latitude': fields.String,
     'is_default': fields.Boolean
 }
 
@@ -215,6 +220,9 @@ class OpenidAddressResource(BaseResource):
         parser.add_argument('id', type=int)
         parser.add_argument('contact', type=str, required=True, help='contact name should be required')
         parser.add_argument('phone', type=str, required=True, help='phone should be required')
+        parser.add_argument('province', type=str, required=True, help='phone should be required')
+        parser.add_argument('city', type=str, required=True, help='phone should be required')
+        parser.add_argument('district', type=str, required=True, help='phone should be required')
         parser.add_argument('address', type=str, required=True, help='address should be required')
         parser.add_argument('is_default', type=bool, required=True, help='default setting should be required')
         # parser.add_argument('date', type=lambda x: datetime.strptime(x,'%Y-%m-%dT%H:%M:%S'))
@@ -229,6 +237,9 @@ class OpenidAddressResource(BaseResource):
             address = MemberOpenidAddress()
         address.contact = data['contact']
         address.phone = data['phone']
+        address.province = data['province']
+        address.city = data['city']
+        address.district = data['district']
         address.address = data['address']
         address.openid = mo.openid
         if data['is_default']:
@@ -258,12 +269,14 @@ class OpenidAddressesResource(BaseResource):
     @marshal_with(address_fields)
     def get(self, shopcode):
         parser = RequestParser()
-        parser.add_argument('openid', type=str, required=True, location='args', help='openid should be required')
+        parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
         # parser.add_argument('date', type=lambda x: datetime.strptime(x,'%Y-%m-%dT%H:%M:%S'))
         args = parser.parse_args()
-        logger.debug('GET request args: %s', args)
+        logger.debug('query member address request args: %s', args)
 
         shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
-        addresses = MemberOpenidAddress.query.filter_by(openid=args['openid']).all()
+        mo = MemberOpenid.query.filter_by(access_token=args['X-ACCESS-TOKEN']).first_or_404()
+        addresses = MemberOpenidAddress.query.filter_by(openid=mo.openid).all()
+        print(addresses)
 
         return addresses

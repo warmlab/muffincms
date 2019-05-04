@@ -568,7 +568,12 @@ class MemberOpenidAddress(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     contact = db.Column(db.String(128))
     phone = db.Column(db.String(12))
-    address = db.Column(db.String(1024))
+    province = db.Column(db.String(32))
+    city = db.Column(db.String(32))
+    district = db.Column(db.String(32))
+    address = db.Column(db.String(512))
+    longitude = db.Column(db.Numeric(10, 7)) # 经度
+    latitude = db.Column(db.Numeric(10, 7)) # 纬度
     is_default = db.Column(db.Boolean, default=False)
 
     openid = db.Column(db.String(64), db.ForeignKey('member_openid.openid')) # used in weixin
