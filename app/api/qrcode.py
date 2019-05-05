@@ -25,7 +25,7 @@ class QRCodeResource(BaseResource):
         member = MemberOpenid.query.filter_by(shoppoint_id=shop.id, access_token=data['X-ACCESS-TOKEN']).first_or_404()
         if data['type'] == 'promotion':
           target = Promotion.query.get_or_404(data['id'])
-          if tareget.shoppoint_id != shop.id:
+          if target.shoppoint_id != shop.id:
               logger.warning(MESSAGES[STATUS_NO_RESOURCE])
               abort(404, status=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE])
         else:
@@ -37,14 +37,15 @@ class QRCodeResource(BaseResource):
         #path = data['path'] + '?code='+data['product'] + '&user='+member.openid
         # print(path)
 
-        return self._generateQRCode(current_app.config['UPLOAD_FOLDER'], data['path'], partment, product, member, data['type'])
+        return self._generateQRCode(current_app.config['UPLOAD_FOLDER'], data['path'], partment, target, member, data['type'])
 
     def _generateQRCode(self, upload_folder, path, partment, target, user, type):
         data = {'auto_color': True}
         if type == 'promotion':
-          data['path'] = path + '?id=' + target.id + '&member=' + user.openid,
+          data['path'] = path + '?id=' + str(target.id) + '&member=' + user.openid
         else:
-          data['path'] = path + '?code=' + target.code + '&member=' + user.openid,
+          data['path'] = path + '?code=' + target.code + '&member=' + user.openid
+        print(data)
         #url_param = urlencode(params).encode('utf-8')
         data = json.dumps(data).encode('utf-8')
         # with urlopen("https://api.weixin.qq.com/cgi-bin/wxaapp/createwxaqrcode?access_token=" + self.get_access_token(), data) as f:
@@ -58,9 +59,9 @@ class QRCodeResource(BaseResource):
                 os.mkdir(base_path)
             except Exception as e:
                 pass
-            file_path = os.path.join(base_path, str(product.id))+'.jpeg'
+            file_path = os.path.join(base_path, str(target.id))+'.jpeg'
             image = open(file_path, 'wb')
             image.write(result)
             image.close()
 
-            return {'qr_image_path': user.openid + '/' + str(product.id) + '.jpeg'}
+            return {'qr_image_path': user.openid + '/' + str(target.id) + '.jpeg'}
