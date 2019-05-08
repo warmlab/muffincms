@@ -146,6 +146,7 @@ class ProductResource(BaseResource):
         #product.promote_allowed = data['promote_allowed']
         product.summary =  data['summary']
         product.note = data['note']
+        product.stock = data['stock']
 
         product.shoppoint_id = shop.id
         product.shoppoint = shop
