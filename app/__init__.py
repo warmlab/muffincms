@@ -38,8 +38,8 @@ def create_app(config_name):
     from .weixin import weixin as weixin_blueprint
     app.register_blueprint(weixin_blueprint, url_prefix='/weixin')
 
-    #from .admin import admin as admin_blueprint
-    #app.register_blueprint(admin_blueprint, url_prefix='/admin')
+    from .admin import admin as admin_blueprint
+    app.register_blueprint(admin_blueprint, url_prefix='/admin')
 
     # just for develop
     @app.route('/media/<path:filename>', methods=['GET'])

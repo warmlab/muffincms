@@ -18,6 +18,8 @@ def access_weixin_api(url, body, **kwargs):
         return info
 
 def notify_admins(order, shoppoint_id):
+    # 获取营业网点
+    shoppoint = Shoppoint.query.get_or_404(shoppoint_id)
     # 获取公众号的partment
     web = Partment.query.filter_by(shoppoint_id=shoppoint_id, code='web').first()
     if not web:
@@ -28,10 +30,10 @@ def notify_admins(order, shoppoint_id):
     promotion = order.promotion
     if promotion:
         first = promotion.name + '-拼团编号: ' + str(order.index)
-        url = 'https://wecakes.com/admin/order/info?promotion=' + str(promotion.id) + '&order=' + order.code
+        #array.extend(['&promotion=', str(promotion.id)])
     else:
         first = '商城订单: ' + order.code
-        url = 'https://wecakes.com/admin/order/info?order=' + order.code
+    url = ''.join(['https://wecakes.com/admin/', shoppoint.code, '/order/info?=order', order.code])
 
     data = {
             "first": {
