@@ -6,6 +6,8 @@
 }
 
 .member img {
+  width: 4em;
+  height: 4em;;
   border-radius: 50%;
   margin: 1em;
 }
@@ -19,11 +21,16 @@
   padding: 1em 0;
   border-bottom: 1px solid #eeeeee;
   margin-bottom: .1em;
+  align-items: center;
 }
 
 .order .title {
   margin: 0 .5em;
   color: #888888;
+}
+
+.order .code {
+  font-size: 4em;
 }
 
 .order .products {
@@ -38,7 +45,8 @@
 }
 
 .order .products .product img {
-  width: 100%;
+  width: 98%;
+  padding: 0 2% 2% 0;
 }
 
 .order .products .product .info {
@@ -48,14 +56,15 @@
   height: 1.5em;
   background-color: #fcfcfc88;
   font-size: .8em;
-  color: #888888;
   font-weight: bold;
   font-family: monospace;
 }
 
 .order .products .product .info .name {
   flex-grow: 1;
+  height: 100%;
   overflow: hidden;
+  color: #888888;
 }
 
 .order .products .product .info .amount {

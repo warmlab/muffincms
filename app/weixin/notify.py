@@ -33,7 +33,7 @@ def notify_admins(order, shoppoint_id):
         #array.extend(['&promotion=', str(promotion.id)])
     else:
         first = '商城订单: ' + order.code
-    url = ''.join(['https://wecakes.com/admin/', shoppoint.code, '/order/info?=order', order.code])
+    url = ''.join(['https://wecakes.com/admin/', shoppoint.code, '/order/info?code=', order.code])
 
     data = {
             "first": {
