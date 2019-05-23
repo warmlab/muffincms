@@ -1,8 +1,18 @@
+body {
+  font-family: sans-serif;
+}
+
 .member {
   display: flex;
   align-items: center;
   background-color: #353535;
   color: #fff;
+}
+
+.member .code {
+  flex: 1;
+  font-size: 3.5em;
+  margin-left: .5em;
 }
 
 .member img {
@@ -13,7 +23,7 @@
 }
 
 .member .name {
-
+  margin-right: 1em;
 }
 
 .order {
@@ -27,10 +37,6 @@
 .order .title {
   margin: 0 .5em;
   color: #888888;
-}
-
-.order .code {
-  font-size: 4em;
 }
 
 .order .products {
