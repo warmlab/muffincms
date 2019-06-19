@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<title>{{promotion.name}}</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="http://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <!--link rel="stylesheet" href="{{url_for('static', filename='css/admin.css')}}"-->
+    <script src="http://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+	<style type="text/css">
+		section.orders {
+			display: flex;
+			flex-direction: row;
+			flex-wrap: wrap;
+		}
+
+		section.orders .order {
+			display: flex;
+			flex-direction: column;
+			width: 48.5%;
+			margin-left: 1%;
+			border: 1px solid #eeeeee;
+			margin-bottom: 10px;
+			text-decoration: none;
+		}
+
+		section.orders .order .title {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			font-size: 32px;
+			background-color: #353535;
+			color: #fff;
+			padding: 10px 0;
+			margin-bottom: 4px;
+		}
+
+		section.orders .order .price {
+			background-color: #eeeeee;
+			font-size: 20px;
+			font-family: sans-serif;
+		}
+
+		section.orders .order .member {
+			background-color: #eeeeee;
+			font-size: 20px;
+			font-family: sans-serif;
+			margin-top: 4px;
+		}
+
+		section.orders .order .paid {
+			background-color: #09bb0788;
+			font-size: 18px;
+			margin: 4px 0;
+		}
+
+		section.orders .order .not.paid {
+			background-color: #e6434088;
+		}
+
+
+		section.orders .order .products {
+			display: flex;
+			flex-direction: row;
+			flex-wrap: wrap;
+		}
+
+		section.orders .order span {
+			color: #353535;
+			padding: 0 1%;
+		}
+
+		section.orders .order .products .product {
+			display: flex;
+			flex-direction: row;
+			width: 48.5%;
+			margin-left: 1%;
+			overflow: hidden;
+			margin-bottom: 4px;
+		}
+
+		section.orders .order .products .product img {
+			object-fit: contain;
+			width: 100%;
+			height: 100%;
+		}
+
+		section.orders .order .products .product span {
+			position: absolute;
+			background-color: #09bb07;
+			margin: 4px;
+			border-radius: 50%;
+			color: #fff;
+			height: 20px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+	</style>
+	</head>
+	<body>
+		<header>
+			<hgroup>
+			<h2>{{promotion.name}}</h2>
+			<h4>{{promotion.note}}</h4>
+			</hgroup>
+		</header>
+		<section class="orders">
+					{% for order in promotion.orders -%}
+					{%- if order.index %}
+			<a class="order" href="/admin/muffins/order/info?code={{order.code}}">
+				<span class="title">{{order.index}}-{{order.member_openid.nickname}}</span>
+				<div class="products">
+							{%- for p in order.products %}
+							<section class="product">
+							<img src="/media/{{p.product.images[0].image.name}}">
+							<span>{{p.amount}}</span>
+							</section>
+							{%endfor%}
+				</div>
+				<span class="price">￥{{order.cost/100}}{%if order.delivery_fee%}￥{{order.delivery_fee/100}}{%endif%}</span>
+				{%-if order.member_openid.phone%}
+				<span class="member">会员信息: {{order.member_openid.name}}[{{order.member_openid.phone}}]</span>
+				{%-endif%}
+				{%-if order.pay_time and order.payment_code%}
+				<span class="paid">{%if order.payment==2%}储值卡{%else%}微信{%endif%}已支付</span>
+				{%-else%}
+				<span class="not paid">{%if order.payment==2%}储值卡{%else%}微信{%endif%}未支付</span>
+				{%-endif%}
+				<span>{{order.order_time}}</span>
+				<span>{%if order.pay_time%}{{order.pay_time}}{%endif%}</span>
+				<span>{%if order.address.delivery_way==1%}自提{%else%}快递{%endif%}</span>
+				<span>{%if order.address%}{{order.address.name}}[{{order.address.phone}}]-{{order.address.address}}{%endif%}</span>
+				<span>{{order.note}}</span>
+			</a>
+					{% endif -%}
+					{%- endfor %}
+		</section>
+	</body>
+</html>
+

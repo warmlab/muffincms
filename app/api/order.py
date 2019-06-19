@@ -111,8 +111,6 @@ class OrderResource(BaseResource):
 
         data = parser.parse_args()
 
-        print(data['products'])
-
         partment = Partment.query.filter_by(shoppoint_id=shop.id, code=data['X-PARTMENT']).first_or_404()
 
         # customer info

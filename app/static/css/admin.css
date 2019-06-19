@@ -91,3 +91,15 @@ body {
 .order .content.not-paid {
   color: #e64340;
 }
+
+.list {
+	display: flex;
+	color: #888888;
+	text-decoration: none;
+	padding: 1em 0;
+}
+
+.list a {
+	flex: 1;
+	text-decoration: none;
+}

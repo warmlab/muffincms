@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>小麦芬烘焙</title>
-    <link rel="stylesheet" href="http://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="{{url_for('static', filename='css/admin.css')}}">
     <script src="http://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
   </head>
@@ -85,5 +85,10 @@
       <span class="title">状态</span>
       <span class="content">{{order.status}}</span>
     </section>
+	{%-if order.promotion %}
+	<section class="list">
+		<a class="btn btn-primary stretched-link" href="/admin/muffins/order/list?promotion={{order.promotion.id}}">查看该团购的所有订单   &gt;&gt;</a>
+	</section>
+	{%-endif%}
   </body>
 </html>
