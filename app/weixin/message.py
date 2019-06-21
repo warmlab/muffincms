@@ -39,16 +39,40 @@ class Message():
 
         return body
 
+    def _generate_news_body(self):
+        home_web = "https://wecakes.com"
+        body = """<xml>
+        <ToUserName><![CDATA[%s]]></ToUserName>
+        <FromUserName><![CDATA[%s]]></FromUserName>
+        <CreateTime>%d</CreateTime>
+        <MsgType><![CDATA[news]]></MsgType>
+        <ArticleCount>1</ArticleCount>
+        <Articles>
+            <item>
+              <Title><![CDATA[用心做 不做作]]></Title>
+              <Description><![CDATA[地址：青岛市李沧区九水路227号宝龙城市广场3层小麦芬烘焙课堂]]></Description>
+              <PicUrl><![CDATA[https://mmbiz.qpic.cn/mmbiz_jpg/oXT2ftOBH9y4xFZHSH4EEQVx0vWUp7aKzSXMIFcicvfZFetBmj3icYsOzV4N7dK86iaTxne1FPaSdEn0UJXmKibVWA/0?wx_fmt=jpeg]]></PicUrl>
+              <Url><![CDATA[http://mp.weixin.qq.com/s?__biz=MzAwMjE3MzEyNw==&mid=307737452&idx=1&sn=b35910fcfb0bb2166ff4aea760f5818f&chksm=0d6d62c43a1aebd27b0833473c19a6c0bbf29ab4c7134ff9040fe004158cfb3322f9ddf1ec0e#rd]]></Url>
+            </item>
+        </Articles>""" % (self.__properties['FromUserName'], self.__properties['ToUserName'],
+                     int(time()))
+
+        print(body)
+
+
+        return body
+
     def _generate_text_body(self):
-        home_web = "http://m.wecakes.com"
+        print(self.__properties)
+        #home_web = "http://m.wecakes.com"
         body = """<xml>
         <ToUserName><![CDATA[%s]]></ToUserName>
         <FromUserName><![CDATA[%s]]></FromUserName>
         <CreateTime>%d</CreateTime>
         <MsgType><![CDATA[text]]></MsgType>
-        <Content><![CDATA[亲爱的%s，您好，欢迎关注小麦芬烘焙工作室，请致电13370836021订购或者访问%s]]></Content>
+        <Content><![CDATA[亲爱的%s，您好，欢迎关注小麦芬烘焙工作室，请致电13370882078订购或者访问小麦芬烘焙小店小程序]]></Content>
         </xml>""" % (self.__properties['FromUserName'], self.__properties['ToUserName'],
-                     int(time()), self.member.nickname if self.member and self.member.nickname else "", home_web)
+                     int(time()), self.member.nickname if self.member and self.member.nickname else "")
 
         return body
 

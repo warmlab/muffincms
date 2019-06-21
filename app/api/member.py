@@ -253,7 +253,7 @@ class OpenidAddressResource(BaseResource):
 
     def delete(self, shopcode):
         parser = RequestParser()
-        parser.add_argument('openid', type=str, required=True, help='openid should be required')
+        #parser.add_argument('openid', type=str, required=True, help='openid should be required')
         parser.add_argument('id', type=int, required=True, help='address id should be required')
         # parser.add_argument('date', type=lambda x: datetime.strptime(x,'%Y-%m-%dT%H:%M:%S'))
         args = parser.parse_args()
