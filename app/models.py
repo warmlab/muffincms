@@ -140,6 +140,7 @@ class Product(db.Model):
     stock = db.Column(db.Integer, default=0) # 库存
     promote_stock = db.Column(db.Integer, default=0) # 建议的参与促销的库存
     to_point = db.Column(db.Boolean, default=False) # 是否参与积分
+    payment = db.Column(db.Integer, default=15) # 该商品支持的支付方式 1-现金支付 2-储值卡支付 4-微信支付 8-支付宝支付
     summary = db.Column(db.Text)
     note = db.Column(db.Text)
 
@@ -156,6 +157,9 @@ class Product(db.Model):
     shoppoint = db.relationship('Shoppoint',
                          backref=db.backref('products', lazy="dynamic"))
 
+    promote_begin_time = db.Column(db.DateTime) # 团购开始时间
+    promote_end_time = db.Column(db.DateTime) # 团购结束时间
+    promote_delivery_time = db.Column(db.DateTime) # 团购交付开始时间
     images = db.relationship('ProductImage', back_populates='product', order_by="asc(ProductImage.index)")
     promotions = db.relationship('PromotionProduct', back_populates='product')
     orders = db.relationship('OrderProduct', back_populates='product')

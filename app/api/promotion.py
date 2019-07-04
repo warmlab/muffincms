@@ -156,6 +156,8 @@ class PromotionResource(BaseResource):
               pp.is_deleted = True
         for index, p in enumerate(data['products']):
             product = Product.query.get_or_404(p['id'])
+            product.promote_begin_time = datetime.strptime(' '.join([data['from_date'], data['from_time']]), '%Y-%m-%d %H:%M')
+            product.promote_end_time = datetime.strptime(' '.join([data['last_order_date'], data['last_order_time']]), '%Y-%m-%d %H:%M')
             if product.category and product.category.extra_info and product.category.extra_info & 1 == 1:
                 size = Size.query.get_or_404(p['size'])
                 pp = PromotionProduct.query.filter_by(promotion_id=promotion.id, product_id=product.id, size_id=size.id).first()
