@@ -5,8 +5,6 @@ from datetime import datetime
 
 from xml.etree import ElementTree as etree
 
-from ..logging import logger
-
 class Message():
     def __init__(self):
         #self.message = message

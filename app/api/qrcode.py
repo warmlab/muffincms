@@ -1,5 +1,6 @@
 from flask import current_app, json
 
+from flask_restful import abort
 from flask_restful.reqparse import RequestParser
 
 from urllib.parse import urlencode
@@ -8,11 +9,13 @@ from urllib.request import urlopen
 
 from .base import BaseResource
 from ..models import Shoppoint, Partment, MemberOpenid, Product, Promotion
+from ..status import STATUS_NO_RESOURCE, STATUS_NO_VALUE_CARD_INFO, MESSAGES
 
 
 class QRCodeResource(BaseResource):
-    def post(self, shopcode):
+    def post(self):
         parser = RequestParser()
+        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
         parser.add_argument('X-PARTMENT', type=str, required=True, location='headers', help='partment code must be required')
         parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
         parser.add_argument('path', type=str, required=True, help='program path must be required')
@@ -20,18 +23,16 @@ class QRCodeResource(BaseResource):
         parser.add_argument('type', type=str, required=True, help='type[promotion/product]  must be required')
         data = parser.parse_args()
 
-        shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
+        shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
         partment = Partment.query.filter_by(shoppoint_id=shop.id, code=data['X-PARTMENT']).first_or_404()
         member = MemberOpenid.query.filter_by(shoppoint_id=shop.id, access_token=data['X-ACCESS-TOKEN']).first_or_404()
         if data['type'] == 'promotion':
           target = Promotion.query.get_or_404(data['id'])
           if target.shoppoint_id != shop.id:
-              logger.warning(MESSAGES[STATUS_NO_RESOURCE])
               abort(404, status=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE])
         else:
           target = Product.query.get_or_404(data['id'])
           if target.shoppoint_id != shop.id:
-              logger.warning(MESSAGES[STATUS_NO_RESOURCE])
               abort(404, status=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE])
 
         #path = data['path'] + '?code='+data['product'] + '&user='+member.openid

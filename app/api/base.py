@@ -7,7 +7,6 @@ from flask_restful.reqparse import RequestParser
 
 from ..models import Shoppoint, Partment, MemberOpenid
 from ..status import STATUS_NO_REQUIRED_HEADERS, STATUS_TOKEN_INVALID, MESSAGES
-from ..logging import logger
 
 def authenticate(func):
     @wraps(func)
@@ -15,7 +14,7 @@ def authenticate(func):
         if not getattr(func, 'authenticated', True):
             return func(*args, **kwargs)
 
-        #logger.debug('the function args: %s - %s', args, kwargs)
+        #print('the function args: %s - %s', args, kwargs)
         #shop = Shoppoint.query.filter_by(code=kwargs['shopcode']).first_or_404()
         #acct = basic_authentication()  # custom account lookup function
         parser = RequestParser()
@@ -23,7 +22,6 @@ def authenticate(func):
         parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
         parser.add_argument('X-PARTMENT', type=str, location='headers', required=True, help='partment code must be required')
         parser.add_argument('X-VERSION', type=str, location='headers')
-
 
         data = parser.parse_args()
         if not data['X-ACCESS-TOKEN'] or not data['X-VERSION'] or not data['X-SHOPPOINT']:
@@ -40,4 +38,5 @@ def authenticate(func):
     return wrapper
 
 class BaseResource(Resource):
-    method_decorators = [authenticate]
+    #method_decorators = [authenticate]
+    pass

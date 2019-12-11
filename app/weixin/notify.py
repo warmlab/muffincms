@@ -4,7 +4,6 @@ from urllib.request import urlopen
 from flask import json
 
 from ..models import Partment, Shoppoint, Staff
-from ..logging import logger
 
 def access_weixin_api(url, body, **kwargs):
     params = urlencode(kwargs)

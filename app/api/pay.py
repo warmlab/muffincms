@@ -2,7 +2,7 @@ from uuid import uuid4
 from time import time
 from datetime import datetime
 
-from flask import url_for
+from flask import url_for, abort
 from flask_restful import marshal_with, marshal
 from flask_restful.reqparse import RequestParser
 
@@ -17,9 +17,9 @@ from .base import BaseResource
 from .order import order_fields
 
 class PayResource(BaseResource):
-    def post(self, shopcode):
-        shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
+    def post(self):
         parser = RequestParser()
+        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
         parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
         parser.add_argument('X-PARTMENT', type=str, location='headers', required=True, help='access token must be required')
         parser.add_argument('X-VERSION', type=str, location='headers')
@@ -31,6 +31,7 @@ class PayResource(BaseResource):
 
         data = parser.parse_args()
 
+        shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
         partment = Partment.query.filter_by(shoppoint_id=shop.id, code=data['X-PARTMENT']).first_or_404()
 
         mo = MemberOpenid.query.filter_by(access_token=data['X-ACCESS-TOKEN']).first_or_404()

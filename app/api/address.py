@@ -6,7 +6,6 @@ from flask_restful import abort
 from flask_restful import fields, marshal_with
 from flask_restful.reqparse import RequestParser
 
-from ..logging import logger
 from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, MESSAGES
 
 from ..models import db
@@ -31,25 +30,27 @@ address_fields = {
 
 class AddressResource(BaseResource):
     @marshal_with(address_fields)
-    def get(self, shopcode):
+    def get(self):
         parser = RequestParser()
         parser.add_argument('code', type=int, location='args', help='pickup address code should be required')
+        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
         args = parser.parse_args()
-        logger.debug('GET request args: %s', args)
+        print('GET request args: %s', args)
         if not args['code']:
-            logger.error('no code argument in request')
+            print('no code argument in request')
             abort(400, status=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'pickup address code')
-        shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
+        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
         address = PickupAddress.query.get(args['code'])
         if not address or address.shoppoint_id != shop.id:
-            logger.warning(MESSAGES[STATUS_NO_RESOURCE])
+            print(MESSAGES[STATUS_NO_RESOURCE])
             abort(404, status=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE])
 
         return address
 
     @marshal_with(address_fields)
-    def post(self, shopcode):
+    def post(self):
         parser = RequestParser()
+        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
         parser.add_argument('code', type=int)
         parser.add_argument('contact', type=str)
         parser.add_argument('phone', type=str)
@@ -63,9 +64,9 @@ class AddressResource(BaseResource):
         parser.add_argument('from_time', type=str)
         parser.add_argument('to_time', type=str)
         data = parser.parse_args()
-        logger.debug('POST request args: %s', data)
+        print('POST request args: %s', data)
 
-        shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
+        shop = Shoppoint.query.filter_by(code=dat['X-SHOPPOINT']).first_or_404()
 
         address = None
         if data['code']:
@@ -91,15 +92,16 @@ class AddressResource(BaseResource):
 
 class AddressesResource(BaseResource):
     @marshal_with(address_fields)
-    def get(self, shopcode):
-        #parser = RequestParser()
+    def get(self):
+        parser = RequestParser()
+        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
         #parser.add_argument('code', type=int, help='pickup address code should be required')
-        #args = parser.parse_args(strict=True)
-        #logger.debug('GET request args: %s', args)
+        args = parser.parse_args(strict=True)
+        #print('GET request args: %s', args)
         #if not args['code']:
-        #    logger.error('no code argument in request')
+        #    print('no code argument in request')
         #    abort(400, status=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'pickup address code')
-        shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
+        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
         addresses = PickupAddress.query.filter_by(shoppoint_id=shop.id).all()
 
         return addresses

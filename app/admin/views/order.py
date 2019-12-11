@@ -4,13 +4,10 @@ from flask import render_template
 from .. import admin
 from ...models import Order, Shoppoint, Promotion
 
-from ...logging import logger
-
 
 @admin.route('/<shopcode>/order/info', methods=['GET'])
 def order_info(shopcode):
-  #logger.debug(request.headers)
-  logger.debug(request.args)
+  print(request.args)
 
   shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
   code = request.args['code']

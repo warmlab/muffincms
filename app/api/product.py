@@ -6,7 +6,6 @@ from flask_restful import abort
 from flask_restful import fields, marshal_with
 from flask_restful.reqparse import RequestParser
 
-from ..logging import logger
 from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, MESSAGES
 
 from ..models import db
@@ -79,30 +78,30 @@ product_fields = {
 
 class ProductResource(BaseResource):
     @marshal_with(product_fields)
-    def get(self, shopcode):
+    def get(self):
         parser = RequestParser()
+        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
         parser.add_argument('code', type=str, location="args", help='product code should be required')
         args = parser.parse_args()
-        logger.debug('GET request args: %s', args)
+        print('GET request args: %s', args)
         if not args['code']:
-            logger.error('no code argument in request')
+            print('no code argument in request')
             abort(400, status=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'product code')
 
-        shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
+        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
         product = Product.query.filter_by(shoppoint_id=shop.id, code=args['code'], is_deleted=False).first()
         if not product:
-            logger.warning(MESSAGES[STATUS_NO_RESOURCE])
+            print(MESSAGES[STATUS_NO_RESOURCE])
             abort(404, status=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE])
 
         return product
 
 
     @marshal_with(product_fields)
-    def post(self, shopcode):
-        print('aaa', request.data)
+    def post(self):
         is_new_product = False
-        shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
         parser = RequestParser()
+        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
         parser.add_argument('code', type=str)
         parser.add_argument('name', type=str, required=True, help='product name should be required')
         parser.add_argument('english_name', type=str)
@@ -125,6 +124,7 @@ class ProductResource(BaseResource):
         data = parser.parse_args()
         print(data)
 
+        shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
         product = Product.query.filter_by(code=data['code'], is_deleted=False).first()
         if not product:
             is_new_product = True
@@ -155,7 +155,7 @@ class ProductResource(BaseResource):
         product.category_id = category.id
         product.category = category
 
-        logger.debug(data)
+        print(data)
         # remove image not needed
         if data['to_remove_images']:
           for photo in data['to_remove_images']:
@@ -223,18 +223,19 @@ class ProductResource(BaseResource):
         return product
 
     @marshal_with(product_fields)
-    def delete(self, shopcode):
+    def delete(self):
         parser = RequestParser()
+        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
         parser.add_argument('code', type=str, help='product code should be required')
         args = parser.parse_args()
-        logger.debug('GET request args: %s', args)
+        print('GET request args: %s', args)
         if not args['code']:
-            logger.error('no code argument in request')
+            print('no code argument in request')
             abort(400, status=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'product code')
-        shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
+        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
         product = Product.query.filter_by(shoppoint_id=shop.id, code=args['code'], is_deleted=False).first()
         if not product:
-            logger.warning(MESSAGES[STATUS_NO_RESOURCE])
+            print(MESSAGES[STATUS_NO_RESOURCE])
             abort(404, status=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE])
 
         product.is_deleted = True
@@ -245,16 +246,17 @@ class ProductResource(BaseResource):
 
 class ProductsResource(BaseResource):
     @marshal_with(product_fields)
-    def get(self, shopcode):
+    def get(self):
         parser = RequestParser()
+        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
         parser.add_argument('type', type=int, location='args', required=True, help='terminal type should be required')
         parser.add_argument('sort', type=str, location='args')
         parser.add_argument('limit', type=int, location='args')
         parser.add_argument('category', type=int, location='args')
         data = parser.parse_args()
 
-        logger.debug('GET request args: %s', data)
-        shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
+        print('GET request args: %s', data)
+        shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
         if data['category']:
             category = ProductCategory.query.get_or_404(data['category'])
             products = Product.query.filter(Product.shoppoint_id==shop.id,
@@ -287,8 +289,11 @@ class ProductsResource(BaseResource):
 
 class SizesResource(BaseResource):
     @marshal_with(size_fields)
-    def get(self, shopcode):
-        shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
+    def get(self):
+        parser = RequestParser()
+        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
+        data = parser.parse_args()
+        shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
         sizes = Size.query.filter(Size.shoppoint_id==shop.id).order_by(Size.index.asc()).all()
 
         return sizes

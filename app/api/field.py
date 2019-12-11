@@ -1,7 +1,5 @@
 from flask_restful import fields
 
-from ..logging import logger
-
 class DateTimeField(fields.DateTime):
     def format(self, value):
         if not value:

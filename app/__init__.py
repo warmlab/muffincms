@@ -4,7 +4,6 @@ from flask import send_from_directory
 from flask_mail import Mail
 
 from config import config
-from .logging import init_logging
 
 # should be comment
 #from .admin import init_admin
@@ -18,7 +17,6 @@ def create_app(config_name):
     app.config.from_object(config[config_name])
     config[config_name].init_app(app);
 
-    init_logging(app)
     db.init_app(app)
     # should be comment
     #init_admin(app)
@@ -29,11 +27,11 @@ def create_app(config_name):
         sslify = SSLify(app)
 
     from .api import api_blueprint
-    app.register_blueprint(api_blueprint, url_prefix='/api/<string:shopcode>')
+    app.register_blueprint(api_blueprint, url_prefix='/api')
     #app.register_blueprint(api_blueprint, url_prefix='/api')
 
     from .payment import payment as payment_blueprint
-    app.register_blueprint(payment_blueprint, url_prefix='/pay/<string:shopcode>')
+    app.register_blueprint(payment_blueprint, url_prefix='/pay/<string:shopcode>/<string:partcode>')
 
     from .weixin import weixin as weixin_blueprint
     app.register_blueprint(weixin_blueprint, url_prefix='/weixin')

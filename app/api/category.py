@@ -6,7 +6,6 @@ from flask_restful import abort
 from flask_restful import fields, marshal_with
 from flask_restful.reqparse import RequestParser
 
-from ..logging import logger
 from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, MESSAGES
 
 from ..models import db
@@ -31,18 +30,19 @@ category_fields = {
 
 class CategoriesResource(BaseResource):
     @marshal_with(category_fields)
-    def get(self, shopcode):
-        #parser = RequestParser()
+    def get(self):
+        parser = RequestParser()
+        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
         #parser.add_argument('code', type=str, help='product code should be required')
-        #args = parser.parse_args(strict=True)
-        #logger.debug('GET request args: %s', args)
+        args = parser.parse_args()
+        #print('GET request args: %s', args)
         #if not args['code']:
-        #    logger.error('no code argument in request')
+        #    print('no code argument in request')
         #    abort(400, status=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'product code')
-        shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
+        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
         categories = ProductCategory.query.filter_by(shoppoint_id=shop.id).order_by(ProductCategory.index).all()
         if not categories:
-            logger.warning(MESSAGES[STATUS_NO_RESOURCE])
+            print(MESSAGES[STATUS_NO_RESOURCE])
             abort(404, status=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE])
 
         return categories

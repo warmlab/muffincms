@@ -4,7 +4,6 @@ from flask_restful import Resource
 from flask_restful import fields, marshal_with, abort
 from flask_restful.reqparse import RequestParser
 
-from ..logging import logger
 from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, MESSAGES
 
 from ..models import db
@@ -30,16 +29,17 @@ partment_fields = {
 
 class ShoppointResource(Resource):
     @marshal_with(partment_fields)
-    def get(self, shopcode):
-        shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
+    def get(self):
         parser = RequestParser()
+        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
         parser.add_argument('X-PARTMENT', type=str, required=True, location='headers', help='partment code must be required')
         args = parser.parse_args()
 
         if not args['X-PARTMENT']:
-            logger.error('no shoppoint partment argument in request')
+            print('no shoppoint partment argument in request')
             abort(400, status=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'partment code')
 
+        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
         partment = Partment.query.filter_by(shoppoint_id=shop.id, code=args['X-PARTMENT']).first_or_404()
 
         return partment

@@ -9,13 +9,12 @@ from flask.json import jsonify
 from ..models import db
 from ..models import Product, Shoppoint, Order, Partment
 from ..models import MemberOpenid
-from ..logging import logger
 
 from . import payment
 from ..weixin import Message
 from ..weixin import notify_admins, notify_customer
 
-@payment.route('/<string:partcode>/notify', methods=['GET', 'POST'])
+@payment.route('/notify', methods=['GET', 'POST'])
 def notify(shopcode, partcode):
     # TODO no need to verify signature
     #if not signature_verify():

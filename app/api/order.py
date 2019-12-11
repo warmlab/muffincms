@@ -11,7 +11,6 @@ from flask_restful import abort
 from flask_restful import fields, marshal_with
 from flask_restful.reqparse import RequestParser
 
-from ..logging import logger
 from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, STATUS_NO_ORDER_STATUS, MESSAGES
 
 from ..models import db
@@ -76,15 +75,17 @@ order_fields = {
 
 class OrderResource(BaseResource):
     @marshal_with(order_fields)
-    def get(self, shopcode):
-        shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
+    def get(self):
         parser = RequestParser()
+        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
         parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
         parser.add_argument('X-VERSION', type=str, location='headers')
         parser.add_argument('code', type=str, location='args', required=True, help='order code must be required')
 
         data = parser.parse_args()
-        logger.debug('get order parameter: %s', data)
+        print('get order parameter: %s', data)
+
+        shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
 
         # customer info
         mo = MemberOpenid.query.filter_by(access_token=data['X-ACCESS-TOKEN']).first_or_404()
@@ -94,9 +95,9 @@ class OrderResource(BaseResource):
         return order
 
     @marshal_with(order_fields)
-    def post(self, shopcode):
-        shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
+    def post(self):
         parser = RequestParser()
+        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
         parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
         parser.add_argument('X-PARTMENT', type=str, location='headers', required=True, help='access token must be required')
         parser.add_argument('X-VERSION', type=str, location='headers')
@@ -111,13 +112,14 @@ class OrderResource(BaseResource):
 
         data = parser.parse_args()
 
+        shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
         partment = Partment.query.filter_by(shoppoint_id=shop.id, code=data['X-PARTMENT']).first_or_404()
 
         # customer info
         mo = MemberOpenid.query.filter_by(access_token=data['X-ACCESS-TOKEN']).first_or_404()
         mo.nickname = data['nickname']
         mo.avatarUrl = data['avatarUrl']
-        logger.debug('put order user: %s', mo)
+        print('put order user: %s', mo)
 
         promotion = Promotion.query.get(data['promotion_id'])
         if promotion:
@@ -172,7 +174,7 @@ class OrderResource(BaseResource):
             if p['want_size'] > 0:
                 size = Size.query.get_or_404(p['want_size'])
                 op.size = size
-            logger.debug('the product in order: %s', product)
+            print('the product in order: %s', product)
             op.order = order
             op.product = product
             op.amount = p['want_amount']
@@ -180,7 +182,7 @@ class OrderResource(BaseResource):
             if promotion:
                 if p['want_size'] > 0:
                     pp = PromotionProduct.query.filter_by(promotion_id=promotion.id, product_id=product.id, size_id=size.id).first_or_404()
-                    logger.debug('the product in promotion: %s', pp)
+                    print('the product in promotion: %s', pp)
                     ps = ProductSize.query.get_or_404((product.id, size.id))
                     op.size_id = size.id
                     op.size = size
@@ -189,7 +191,7 @@ class OrderResource(BaseResource):
                     order.original_cost += op.amount * (product.price+ps.price_plus)
                 else:
                     pp = PromotionProduct.query.filter_by(promotion_id=promotion.id, product_id=product.id).first_or_404()
-                    logger.debug('the product in promotion: %s', pp)
+                    print('the product in promotion: %s', pp)
                     op.price = pp.price if pp.price else product.promote_price
                     order.original_cost += op.amount * product.price
             else:
@@ -233,13 +235,14 @@ class OrderResource(BaseResource):
 
 class OrdersResource(BaseResource):
     @marshal_with(order_fields)
-    def get(self, shopcode):
-        shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
-        parser = RequestParser()
+    def get(self):
+        parser = RequestPapurser()
+        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
         parser.add_argument('status', type=str, location='args', required=True, help='order status must be required')
         parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
         data = parser.parse_args()
 
+        shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
         mo = MemberOpenid.query.filter_by(access_token=data['X-ACCESS-TOKEN']).first()
 
         status = data['status']
