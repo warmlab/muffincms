@@ -39,6 +39,9 @@ def create_app(config_name):
     from .admin import admin as admin_blueprint
     app.register_blueprint(admin_blueprint, url_prefix='/admin')
 
+    from .pos import pos as pos_blueprint
+    app.register_blueprint(pos_blueprint, url_prefix='/pos')
+
     # just for develop
     @app.route('/media/<path:filename>', methods=['GET'])
     def media(filename):

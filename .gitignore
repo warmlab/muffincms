@@ -106,3 +106,4 @@ migrations/
 
 *.bak
 *.swp
+.vscode

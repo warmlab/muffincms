@@ -1,0 +1,143 @@
+html {
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  min-width: 20%;
+    /*border: 0.01em solid #888;
+    border-radius: .25em;*/
+  margin-right: 0.2em;
+  height: 100%;
+}
+
+.menu .menu-header {
+  display: flex;
+}
+
+.menu .menu-list {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.menu .menu-list .menu-item {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+}
+
+.menu .menu-list .menu-item .menu-item-header {
+  display: flex;
+}
+
+.menu-list .menu-item .menu-item-header .menu-item-name {
+  display: flex;
+  overflow: hidden;
+  flex-grow: 1;
+  font-size: 16px;
+  flex-wrap: nowrap;
+  font-weight: bold;
+  width: 85%;
+  height: 1.32em;
+  padding-right: .5em;
+}
+
+.menu-list .menu-item .menu-item-header .menu-item-price {
+  font-size: 14px;
+  width: 15%;
+}
+
+.menu-list .menu-item .menu-item-footer {
+  display: flex;
+  font-size: 13px;
+}
+
+.menu-list .menu-item .menu-item-footer .menu-item-amount {
+
+}
+.menu-list .menu-item .menu-item-footer .menu-item-cost {
+  margin: 0 1em;
+}
+
+.menu-list .menu-item .menu-item-footer .menu-item-actions {
+  display: flex;
+  justify-content: space-around;
+  font-size: 14px;
+  flex-grow: 1;
+}
+
+.menu-list .menu-item .menu-item-footer .menu-item-actions svg {
+  display: block;
+  padding: 4px;
+  border-radius: 50%;
+  height: 24px;
+  width: 24px;
+  color: #fff;
+}
+
+.menu-list .menu-item .menu-item-footer .menu-item-actions .menu-item-plus {
+  background-color: green;
+  border: 1px solid green;
+}
+
+.menu-list .menu-item .menu-item-footer .menu-item-actions .menu-item-minus {
+  background-color: orange;
+  border: 1px solid orange;
+}
+
+.menu-list .menu-item .menu-item-footer .menu-item-actions .menu-item-remove {
+  background-color: red;
+  border: 1px solid red;
+}
+
+.menu-pay {
+  background-color: green;
+  color: white;
+  display: flex;
+  justify-content: center;
+  font-size: 30px;
+}
+
+.content {
+  display: flex;
+  flex-grow: 1;
+  margin: 0.2em;
+  height: 100%;
+}
+
+.product-list {
+  display: flex;
+  flex-wrap: wrap;
+  border-left: 1px solid #dee2e6;
+}
+
+.product-item {
+  display: flex;
+  flex-direction: column;
+  border-radius: 4px;
+  margin: .2%;
+  padding: .7%;
+  width: 19.5%;
+  background-color: #d1d1d1;
+  cursor: pointer;
+}
+
+.product-item header {
+  font-weight: bold;
+}
+
+.product-item section {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 1em;
+  font-size: 12px;
+}
