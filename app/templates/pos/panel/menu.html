@@ -1,0 +1,18 @@
+<section id="menu_panel" style="display: flex; flex-direction: column;width: 100%;">
+
+    <ul class="nav nav-tabs" id="categories">
+    {%- for category in categories %}
+        <li class="nav-item" data-id="{{category.id}}">
+        <a class="nav-link" data-index="{{loop.index0}}" data-id="{{category.id}}">{{category.name}}</a>
+        </li>
+        {%- endfor %}
+    </ul>
+    <section class="product-list" id="products">
+    {%- for product in products %}
+    <div class="product-item" data-index="{{loop.index0}}" data-id="{{product.id}}" data-price="{{product.price}}">
+        <header>{{product.name}}</header>
+        <footer data-price="{{product.price}}">￥{{product.price/100}}</footer>
+    </div>
+    {%- endfor %}
+    </section>
+</section>

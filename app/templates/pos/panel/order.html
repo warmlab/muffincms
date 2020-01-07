@@ -1,0 +1,78 @@
+<style>
+    .price-label {
+        font-size: xx-large;
+    }
+    .price-input {
+        font-size: xxx-large;
+    }
+</style>
+<section id="order_panel" style="display: flex; flex-direction: row;width: 100%;">
+    <ul class="list-group">
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <i class="fa fa-vip"></i> 储值卡支付
+            <span class="badge badge-primary badge-pill">14</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <i class="fa fa-weixin"></i>微信扫码
+            <span class="badge badge-primary badge-pill">14</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <i class="fa fa-alipay"></i> 支付宝扫码
+            <span class="badge badge-primary badge-pill">2</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <i class="fa fa-cash"></i> 现金支付
+            <span class="badge badge-primary badge-pill">2</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <i class="fa fa-card"></i>银行卡支付
+            <span class="badge badge-primary badge-pill">1</span>
+        </li>
+    </ul>
+    <section style="display: flex; flex-direction: column; flex-grow: 1;">
+        <button type="button" class="btn btn-success price-label">完成收银</button>
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+                <span class="input-group-text price-label">商品原价</span>
+            </div>
+            <input type="text" class="form-control price-input" id="original-price" disabled placeholder="" aria-label="Username" aria-describedby="basic-addon1">
+        </div>
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+                <span class="input-group-text price-label">应收金额</span>
+            </div>
+            <input type="text" class="form-control price-input" id="money-shouldget" placeholder="" aria-label="Username" aria-describedby="basic-addon1">
+        </div>
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+                <span class="input-group-text price-label">现收金额</span>
+            </div>
+            <input type="text" class="form-control price-input" id="money-getting" placeholder="" aria-label="Username" aria-describedby="basic-addon1">
+        </div>
+        <div class="input-group mb-3">
+
+            <div class="input-group-prepend">
+                <span class="input-group-text price-label">找零</span>
+            </div>
+            <input type="text" class="form-control price-input" id="money-back" disabled placeholder="" aria-label="Username" aria-describedby="basic-addon1">
+        </div>
+        {%- include "pos/keyboard.html" %}
+</section>
+
+<script>
+    var last_focused = undefined;
+    $('input.price-input').blur(e => {
+        last_focused = $(e.currentTarget); 
+    });
+
+    $('.number-pad').children().click(e => {
+        if (last_focused !== undefined) {
+            var text = last_focused.val()
+            last_focused.val(text+$(e.currentTarget).text());
+            last_focused.focus();
+        }
+        console.log();
+    })
+</script>
+
+

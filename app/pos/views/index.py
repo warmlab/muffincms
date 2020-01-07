@@ -9,5 +9,5 @@ from ..auth import login_required
 def index(shoppoint):
     sp = Shoppoint.query.filter_by(code=shoppoint).first_or_404()
     categories = ProductCategory.query.all()
-    products = Product.query.all()
+    products = Product.query.limit(40)
     return render_template('pos/index.html', shoppoint=sp, categories=categories, products=products)

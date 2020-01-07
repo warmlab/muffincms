@@ -3,10 +3,11 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Hello World!</title>
+  <title>Muffins POS</title>
   <link res="stylesheet" href="{{url_for('static', filename='css/fontawesome.min.css')}}"/>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
     integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  <script src="{{url_for('static', filename='js/jquery-3.4.1.min.js')}}"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
   <script src="{{url_for('static', filename='js/fontawesome.min.js')}}"></script>
@@ -15,7 +16,7 @@
 
 <body>
   <nav class="navbar navbar-expand-lg navbar-light bg-light">
-    <img src="images/logo/logo.jpg" width="30" height="30" class="d-inline-block align-top" alt="">
+    <img src="{{url_for('static', filename='images/logo.jpg')}}" width="30" height="30" class="d-inline-block align-top" alt="">
     <a class="navbar-brand" href="#">小麦芬烘焙</a>
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
       aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -25,10 +26,10 @@
     <div class="collapse navbar-collapse">
       <ul class="navbar-nav mr-auto">
         <li class="nav-item active">
-          <a class="nav-link" href="#">Home <span class="sr-only">(current)</span></a>
+          <a class="nav-link active" href="#"><i class="fa fa-book-reader"></i> 点餐</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="#">Link</a>
+          <a class="nav-link" href="#"><i class="fa fa-calculator"></i> 结账</a>
         </li>
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown"
@@ -52,14 +53,15 @@
       </form>
     </div>
   </nav>
-  <section style="display: flex; height: 100%;">
+  <section style="display: flex; flex-grow: 1; height: 100%;">
     <aside class="menu">
-      <ul class="list-group list-group-horizontal menu-header">
+
+      <!--ul class="list-group list-group-horizontal menu-header">
         <li class="list-group-item list-group-item-action">添加备注</li>
         <li class="list-group-item list-group-item-action">打印单据</li>
-      </ul>
+      </ul-->
       <ul class="list-group menu-list" id="menu">
-        <li class="list-group-item list-group-item-action menu-item">
+        <!--li class="list-group-item list-group-item-action menu-item">
           <div class="menu-item-header">
             <h5 class="menu-item-name">aaa</h5>
             <small class="menu-item-price">100</small>
@@ -73,30 +75,15 @@
               <i class="fa fa-times menu-item-remove"></i>
             </div>
           </div>
-        </li>
+        </li-->
       </ul>
       <ul class="list-group">
         <li class="list-group-item menu-pay">挂单</li>
         <li class="list-group-item menu-pay" id="billBtn">结账</li>
       </ul>
     </aside>
-    <section style="display: flex; flex-direction: column;">
-      <ul class="nav nav-tabs" id="categories">
-        {%- for category in categories %}
-          <li class="nav-item">
-            <a class="nav-link" onclick="categoryChange" data-index="{{loop.index0}}" data-id="{{category.id}}">{{category.name}}</a>
-          </li>
-          {%- endfor %}
-      </ul>
-      <section class="product-list" id="products">
-        {%- for product in products %}
-        <div class="product-item" onclick="addProductToMenu(index,product.id)" data-index="{{loop.index0}}" data-id="{{product.id}}">
-          <header>{{product.name}}</header>
-          <section>￥{{product.price/100}}</section>
-        </div>
-        {%- endfor %}
-      </section>
-    </section>
+    {%- include "pos/panel/menu.html" %}
+    {%- include "pos/panel/order.html" %}
   </section>
 <template>
 <transition name="fade" id="billTrans">
@@ -131,4 +118,106 @@
 </transition>
 </template>
 </body>
+<script type="text/javascript">
+  window.onload = () => {
+    /*
+    console.log('{{categories}}');
+    var  categories = [
+      {%- for category in categories %}
+      {{category.to_json()}},
+      {%- endfor %}
+    ];
+    var products = [
+      {%- for product in products %}
+      JSON.parse('{{product.to_json()}}'),
+      {%- endfor %}
+    ];
+    console.log('windows.onload');
+    */
+  };
+  $(document).ready(() => {
+    var menu_items = {products: [], total_cost: 0};
+    console.log('jquery');
+    var selected_category = '{{categories[0].id}}';
+    var $categories = $('#categories');
+    var $menu_panel = $('#menu_panel');
+    var $order_panel = $('#order_panel');
+    $order_panel.hide();
+    var selected_category_obj = $categories.children().first();
+    selected_category_obj.children().addClass('active');
+
+    $categories.children().click(e => {
+      console.log(e.currentTarget);
+      var target = $(e.currentTarget);
+      selected_category_obj.children().removeClass('active');
+      selected_category = target.data('id');
+      selected_category_obj = target;
+      
+      target.children().addClass('active');
+      console.log(selected_category);
+    });
+
+    var $products = $('#products');
+    var $menu = $('#menu');
+    $products.children().click(e => {
+      var product = $(e.currentTarget);
+      var added = false;
+      for (p of menu_items.products) {
+        console.log(p);
+        if (p.id == product.data('id')) {
+          p.amount++;
+          added = true;
+        }
+      }
+      if (!added) {
+        menu_items.products.push({
+          id: product.data('id'),
+          name: product.children('header').text(),
+          price: parseInt(product.children('footer').data('price')),
+          amount: 1
+        })
+
+        menu_items.total_cost += parseInt(product.children('footer').data('price'));
+      }
+      console.log(menu_items);
+      sync_menu_items();
+    });
+
+    var sync_menu_items = () => {
+      $menu.empty();
+      menu_items.products.forEach(product => {
+        var ele = $(`<li class="list-group-item list-group-item-action menu-item" data-id="${product.id}">
+            <div class="menu-item-header">
+              <h5 class="menu-item-name">${product.name}</h5>
+              <small class="menu-item-price">￥${product.price/100}</small>
+            </div>
+            <div class="menu-item-footer">
+              <span class="menu-item-amount" >x ${product.amount}</span>
+              <output class="menu-item-cost">￥${product.price*product.amount/100}</output>
+              <div class="menu-item-actions">
+                <i class="fa fa-plus menu-item-plus"></i>
+                <i class="fa fa-minus menu-item-minus"></i>
+                <i class="fa fa-times menu-item-remove"></i>
+              </div>
+            </div>
+          </li>`);
+        $menu.append(ele);
+    });
+    if (menu_items.total_cost>0)
+      $('#billBtn').text(`总计: ${menu_items.total_cost/100} 结账`);
+    else
+      $('#billBtn').text(`结账`);
+  };
+
+  $('#billBtn').click(e => {
+    console.log('bill button clicked');
+    menu_or_order = 1;
+    $menu_panel.fadeOut('fast', e => {
+
+    $order_panel.fadeIn('fast');
+    $('#money-getting').focus();
+    });
+  })
+});
+</script>
 </html>

@@ -125,6 +125,12 @@ class ProductCategory(db.Model):
     def __repr__(self):
         return self.name
 
+    def to_json(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+        }
+
 class Product(db.Model):
     __tablename__ = 'product'
     id = db.Column(db.Integer, primary_key=True)
@@ -168,6 +174,15 @@ class Product(db.Model):
 
     def __repr__(self):
         return self.name
+
+    def to_json(self):
+        return {
+            'id': self.id,
+            'code': self.code,
+            'name': self.name,
+            'price': self.price,
+            'member_price': self.member_price
+        }
 
 
 class Size(db.Model):
