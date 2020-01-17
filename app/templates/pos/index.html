@@ -25,10 +25,10 @@
 
     <div class="collapse navbar-collapse">
       <ul class="navbar-nav mr-auto">
-        <li class="nav-item active">
+        <li class="nav-item active" id="menu-tab">
           <a class="nav-link active" href="#"><i class="fa fa-book-reader"></i> 点餐</a>
         </li>
-        <li class="nav-item">
+        <li class="nav-item" id="bill-tab">
           <a class="nav-link" href="#"><i class="fa fa-calculator"></i> 结账</a>
         </li>
         <li class="nav-item dropdown">
@@ -155,6 +155,12 @@
       
       target.children().addClass('active');
       console.log(selected_category);
+      $.get('/pos/muffins/products',{category: selected_category},
+        function() {
+          console.log('aa', res);
+        }, 'json').fail(err => {
+          console.error('get products for special category error', err);
+        });
     });
 
     var $products = $('#products');
@@ -211,11 +217,16 @@
 
   $('#billBtn').click(e => {
     console.log('bill button clicked');
-    menu_or_order = 1;
     $menu_panel.fadeOut('fast', e => {
 
     $order_panel.fadeIn('fast');
     $('#money-getting').focus();
+    });
+  });
+
+  $('#menu-tab').click(e => {
+    $order_panel.fadeOut('fast', e => {
+      $menu_panel.fadeIn('fast');
     });
   })
 });

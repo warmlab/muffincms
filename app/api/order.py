@@ -104,7 +104,9 @@ class OrderResource(BaseResource):
         parser.add_argument('promotion_id', type=int, required=True, help='promotion id must be required')
         parser.add_argument('products', type=dict, action='append', required=True, help='product information must be required')
         parser.add_argument('delivery_way', type=int, required=True, help='delivery way must be required')
-        parser.add_argument('address', type=int, required=True, help='address must be required')
+        parser.add_argument('pickup_address', type=int, required=True, help='pickup address must be required')
+        parser.add_argument('delivery_address', type=int, required=True, help='delivery address must be required')
+
 
         parser.add_argument('nickname', type=str)
         parser.add_argument('avatarUrl', type=str)
@@ -219,9 +221,9 @@ class OrderResource(BaseResource):
         oa = OrderAddress()
         oa.delivery_way = data['delivery_way']
         if oa.delivery_way == 1: # 自提模式
-            addr = PickupAddress.query.get(data['address'])
+            addr = PickupAddress.query.get(data['pickup_address'])
         else: # 快递模式
-            addr = MemberOpenidAddress.query.get(data['address'])
+            addr = MemberOpenidAddress.query.get(data['delivery_address'])
         oa.name = addr.contact
         oa.phone = addr.phone
         oa.address = addr.address

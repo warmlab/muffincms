@@ -40,7 +40,7 @@ def create_app(config_name):
     app.register_blueprint(admin_blueprint, url_prefix='/admin')
 
     from .pos import pos as pos_blueprint
-    app.register_blueprint(pos_blueprint, url_prefix='/pos')
+    app.register_blueprint(pos_blueprint, url_prefix='/pos/<shoppoint>')
 
     # just for develop
     @app.route('/media/<path:filename>', methods=['GET'])
