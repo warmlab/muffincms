@@ -147,6 +147,7 @@ class Product(db.Model):
     promote_stock = db.Column(db.Integer, default=0) # 建议的参与促销的库存
     to_point = db.Column(db.Boolean, default=False) # 是否参与积分
     payment = db.Column(db.Integer, default=15) # 该商品支持的支付方式 1-现金支付 2-储值卡支付 4-微信支付 8-支付宝支付
+    status = db.Column(db.Integer, default=0) # 2-pre sale flag
     summary = db.Column(db.Text)
     note = db.Column(db.Text)
 
@@ -181,7 +182,11 @@ class Product(db.Model):
             'code': self.code,
             'name': self.name,
             'price': self.price,
+            'stock': self.stock,
+            'promote_stock': self.promote_stock,
             'member_price': self.member_price
+            'promote_begin_time': self.promote_begin_time,
+            'promote_end_time': self.promote_end_time
         }
 
 

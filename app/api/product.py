@@ -16,7 +16,7 @@ from .base import BaseResource
 from .image import image_fields
 from .category import category_fields
 
-from .field import WebAllowedField, POSAllowedField, PromoteAllowedField
+from .field import WebAllowedField, POSAllowedField, PromoteAllowedField, DateTimeField
 
 product_image_fields = {
     'index': fields.Integer,
@@ -70,6 +70,8 @@ product_fields = {
     'web_allowed': WebAllowedField(attribute='show_allowed'),
     'pos_allowed': POSAllowedField(attribute='show_allowed'),
     'promote_allowed': PromoteAllowedField(attribute='show_allowed'),
+    'promote_begin_time': DateTimeField(dt_format='%Y-%m-%d %H:%M:%S'),
+    'promote_end_time': DateTimeField(dt_format='%Y-%m-%d %H:%M:%S'),
     'is_deleted': fields.Boolean,
     'category': fields.Nested(category_fields),
     'images': fields.List(fields.Nested(product_image_fields)),

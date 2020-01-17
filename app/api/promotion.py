@@ -102,6 +102,7 @@ class PromotionResource(BaseResource):
         parser.add_argument('from_time', type=str, required=True, help='from time should be required')
         parser.add_argument('to_date', type=str, required=True, help='end date should be required')
         parser.add_argument('to_time', type=str, required=True, help='end time should be required')
+        parser.add_argument('to_pre_sale', type=str, required=True, help='pre sale flag should be required')
         parser.add_argument('publish', type=int) # 发布标志
         parser.add_argument('publish_date', type=str)
         parser.add_argument('publish_time', type=str)
