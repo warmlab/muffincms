@@ -12,7 +12,7 @@ from flask_restful import Resource
 from flask_restful import fields, marshal_with, abort
 from flask_restful.reqparse import RequestParser
 
-from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, STATUS_CANNOT_DECRYPT, MESSAGES
+from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, STATUS_CANNOT_DECRYPT, STATUS_TOKEN_INVALID, MESSAGES
 
 from ..models import db
 from ..models import MemberOpenid, Shoppoint, Partment, MemberOpenidAddress

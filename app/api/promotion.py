@@ -89,27 +89,27 @@ class PromotionResource(BaseResource):
         #parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
         #parser.add_argument('X-VERSION', type=str, location='headers')
         parser.add_argument('id', type=int)
-        parser.add_argument('name', type=str)
-        parser.add_argument('binding', type=bool)
+        #parser.add_argument('name', type=str)
+        #parser.add_argument('binding', type=bool)
         #parser.add_argument('valuecard_allowed', type=bool)
         #parser.add_argument('paymode', type=int)
-        parser.add_argument('payment', type=int)
-        parser.add_argument('delivery_fee', type=int)
-        parser.add_argument('delivery_way', type=int)
-        parser.add_argument('last_order_date', type=str, required=True, help='last order date should be required')
-        parser.add_argument('last_order_time', type=str, required=True, help='last order time should be required')
+        #parser.add_argument('payment', type=int)
+        #parser.add_argument('delivery_fee', type=int)
+        #parser.add_argument('delivery_way', type=int)
+        #parser.add_argument('last_order_date', type=str, required=True, help='last order date should be required')
+        #parser.add_argument('last_order_time', type=str, required=True, help='last order time should be required')
         parser.add_argument('from_date', type=str, required=True, help='from date should be required')
         parser.add_argument('from_time', type=str, required=True, help='from time should be required')
         parser.add_argument('to_date', type=str, required=True, help='end date should be required')
         parser.add_argument('to_time', type=str, required=True, help='end time should be required')
-        parser.add_argument('to_pre_sale', type=str, required=True, help='pre sale flag should be required')
-        parser.add_argument('publish', type=int) # 发布标志
-        parser.add_argument('publish_date', type=str)
-        parser.add_argument('publish_time', type=str)
+        #parser.add_argument('to_pre_sale', type=str, required=True, help='pre sale flag should be required')
+        #parser.add_argument('publish', type=int) # 发布标志
+        #parser.add_argument('publish_date', type=str)
+        #parser.add_argument('publish_time', type=str)
         parser.add_argument('note', type=str)
         parser.add_argument('products', type=dict, action='append', required=True, help='product information should be required')
         parser.add_argument('to_remove', type=dict, action='append')
-        parser.add_argument('addresses', type=int, action='append', required=True, help='pickup address information should be required')
+        #parser.add_argument('addresses', type=int, action='append', required=True, help='pickup address information should be required')
 
         data = parser.parse_args()
 
@@ -127,24 +127,24 @@ class PromotionResource(BaseResource):
             promotion = Promotion()
             db.session.add(promotion)
 
-        promotion.name = data['name']
-        promotion.binding = data['binding']
+        #promotion.name = data['name']
+        #promotion.binding = data['binding']
         #promotion.paymode = data['paymode']
-        promotion.payment = data['payment']
+        #promotion.payment = data['payment']
         #promotion.valuecard_allowed = data['valuecard_allowed']
-        promotion.delivery_way = data['delivery_way']
-        promotion.delivery_fee = 0 if promotion.delivery_way == 1 else data['delivery_fee']
-        promotion.last_order_time = datetime.strptime(' '.join([data['last_order_date'], data['last_order_time']]), '%Y-%m-%d %H:%M')
+        #promotion.delivery_way = data['delivery_way']
+        #promotion.delivery_fee = 0 if promotion.delivery_way == 1 else data['delivery_fee']
+        #promotion.last_order_time = datetime.strptime(' '.join([data['last_order_date'], data['last_order_time']]), '%Y-%m-%d %H:%M')
         promotion.from_time = datetime.strptime(' '.join([data['from_date'], data['from_time']]), '%Y-%m-%d %H:%M')
         promotion.to_time = datetime.strptime(' '.join([data['to_date'], data['to_time']]), '%Y-%m-%d %H:%M')
         promotion.shoppoint_id = shop.id
         promotion.shoppoint = shop
         promotion.is_deleted = False
         promotion.note = data['note']
-        if data['publish'] == 0:
-            promotion.publish_time = datetime.now()
-        else:
-            promotion.publish_time = datetime.strptime(' '.join([data['publish_date'], data['publish_time']]), '%Y-%m-%d %H:%M')
+        #if data['publish'] == 0:
+        #    promotion.publish_time = datetime.now()
+        #else:
+        #    promotion.publish_time = datetime.strptime(' '.join([data['publish_date'], data['publish_time']]), '%Y-%m-%d %H:%M')
         if promotion.products:
             PromotionProduct.query.filter_by(promotion_id=promotion.id).update({'is_deleted': True})
         # get max index from db
@@ -194,24 +194,24 @@ class PromotionResource(BaseResource):
                 pp.stock = product.promote_stock
 
         #promotion.addresses = []
-        to_delete_addresses = [pa.address_id for pa in promotion.addresses]
-        for aid in data['addresses']:
-            addr = PickupAddress.query.get_or_404(aid)
-            pa = PromotionAddress.query.get((promotion.id, addr.id))
-            if not pa:
-                pa = PromotionAddress()
-                pa.promotion_id = promotion.id
-                pa.promotion = promotion
-                pa.address = addr
-                #db.session.add(pa)
-                promotion.addresses.append(pa)
-            if aid in to_delete_addresses:
-                to_delete_addresses.remove(aid)
-        for aid in to_delete_addresses:
-            pa = PromotionAddress.query.get((promotion.id, aid))
-            if pa:
-                promotion.addresses.remove(pa)
-                db.session.delete(pa)
+        #to_delete_addresses = [pa.address_id for pa in promotion.addresses]
+        #for aid in data['addresses']:
+        #    addr = PickupAddress.query.get_or_404(aid)
+        #    pa = PromotionAddress.query.get((promotion.id, addr.id))
+        #    if not pa:
+        #        pa = PromotionAddress()
+        #        pa.promotion_id = promotion.id
+        #        pa.promotion = promotion
+        #        pa.address = addr
+        #        #db.session.add(pa)
+        #        promotion.addresses.append(pa)
+        #    if aid in to_delete_addresses:
+        #        to_delete_addresses.remove(aid)
+        #for aid in to_delete_addresses:
+        #    pa = PromotionAddress.query.get((promotion.id, aid))
+        #    if pa:
+        #        promotion.addresses.remove(pa)
+        #        db.session.delete(pa)
 
         db.session.commit()
 

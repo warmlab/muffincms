@@ -18,6 +18,6 @@ def products(shoppoint):
     print(request.headers)
     print(request.args)
 
-    category_id request.args.get('category')
+    category_id = request.args.get('category')
     products = Product.query.filter_by(shoppoint_id=sp.id, category_id=category_id)
     return products.to

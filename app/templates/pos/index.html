@@ -217,10 +217,11 @@
 
   $('#billBtn').click(e => {
     console.log('bill button clicked');
+	price_initiate(`${menu_items.total_cost/100}`);
     $menu_panel.fadeOut('fast', e => {
 
     $order_panel.fadeIn('fast');
-    $('#money-getting').focus();
+    //$('#money-getting').focus();
     });
   });
 
