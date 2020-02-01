@@ -16,6 +16,7 @@ if os.path.exists('.env'):
 from app import create_app
 from app.models import db
 from flask_migrate import Migrate
+from celery import Celery
 
 app = create_app(os.getenv('FLASK_CONFIG') or 'default')
 #manager = Manager(app)
@@ -58,10 +59,28 @@ def profile(length, profile_dir):
     app.run()
 
 @app.cli.command()
+def celery_run():
+	os.exec('celery worker -A celery_runner -l info')
+	#def make_celery(app):
+	#	celery = Celery(app.import_name,
+	#				backend=app.config['CELERY_RESULT_BACKEND'],
+	#				broker=app.config['CELERY_BROKER_URL'])
+	#	celery.conf.update(app.config)
+
+	#	class ContextTask(celery.Task):
+	#		def __call__(self, *args, **kwargs):
+	#			with app.app_context():
+	#				return self.run(*args, **kwargs)
+
+	#	celery.Task = ContextTask
+	#	return celery
+	#celery = make_celery(app)
+
+@app.cli.command()
 def deploy():
     """Run deployment tasks."""
     #from flask_migrate import upgrade
-    from app.models import Role, Member
+    #from app.models import Role, Member
 
     # migrate database to latest revision
     #upgrade()

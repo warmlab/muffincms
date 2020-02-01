@@ -69,6 +69,7 @@ product_fields = {
     'note': fields.String,
     'web_allowed': WebAllowedField(attribute='show_allowed'),
     'pos_allowed': POSAllowedField(attribute='show_allowed'),
+    'promote_type': fields.Integer,
     'promote_allowed': PromoteAllowedField(attribute='show_allowed'),
     'promote_begin_time': DateTimeField(dt_format='%Y-%m-%d %H:%M:%S'),
     'promote_end_time': DateTimeField(dt_format='%Y-%m-%d %H:%M:%S'),

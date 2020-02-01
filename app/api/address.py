@@ -96,12 +96,12 @@ class AddressesResource(BaseResource):
         parser = RequestParser()
         parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
         #parser.add_argument('code', type=int, help='pickup address code should be required')
-        args = parser.parse_args(strict=True)
+        args = parser.parse_args()
         #print('GET request args: %s', args)
         #if not args['code']:
         #    print('no code argument in request')
         #    abort(400, status=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'pickup address code')
         shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
-        addresses = PickupAddress.query.filter_by(shoppoint_id=shop.id, checked=True).all()
+        addresses = PickupAddress.query.filter_by(shoppoint_id=shop.id).all()
 
         return addresses

@@ -12,7 +12,8 @@ from ..models import MemberOpenid
 
 from . import payment
 from ..weixin import Message
-from ..weixin import notify_admins, notify_customer
+
+from server import notify_admins, notify_customer
 
 @payment.route('/notify', methods=['GET', 'POST'])
 def notify(shopcode, partcode):
@@ -53,7 +54,7 @@ def notify(shopcode, partcode):
     #db.session.add(order)
     db.session.commit()
 
-    notify_admins(order, shoppoint.id)
-    notify_customer(order, partment, order.prepay_id)
+    notify_admins.delay(order.code, shoppoint.id)
+    notify_customer(order.code, partment.code, shoppoint.id, order.prepay_id)
 
     return "<xml><return_code><![CDATA[SUCCESS]]></return_code><return_msg><![CDATA[OK]]></return_msg></xml>"

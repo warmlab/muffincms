@@ -147,7 +147,8 @@ class Product(db.Model):
     promote_stock = db.Column(db.Integer, default=0) # 建议的参与促销的库存
     to_point = db.Column(db.Boolean, default=False) # 是否参与积分
     payment = db.Column(db.Integer, default=15) # 该商品支持的支付方式 0x01-现金支付 0x02-储值卡支付 0x04-微信支付 0x08-支付宝支付
-    status = db.Column(db.Integer, default=0) # 0x01-热卖 0x02-上新 0x04-特价 0x08-预售
+    promote_type = db.Column(db.Integer, default=1) # 0x01-热卖 0x02-上新 0x04-特价 0x08-预售
+    status = db.Column(db.Integer, default=0)
     summary = db.Column(db.Text)
     note = db.Column(db.Text)
 
@@ -164,8 +165,8 @@ class Product(db.Model):
     shoppoint = db.relationship('Shoppoint',
                          backref=db.backref('products', lazy="dynamic"))
 
-    promote_begin_time = db.Column(db.DateTime) # 团购开始时间
-    promote_end_time = db.Column(db.DateTime) # 团购结束时间
+    promote_begin_time = db.Column(db.DateTime) # 促销开始时间
+    promote_end_time = db.Column(db.DateTime) # 促销结束时间
     promote_delivery_time = db.Column(db.DateTime) # 团购交付开始时间
     images = db.relationship('ProductImage', back_populates='product', order_by="asc(ProductImage.index)")
     promotions = db.relationship('PromotionProduct', back_populates='product')
@@ -279,6 +280,7 @@ class Promotion(db.Model):
     to_time = db.Column(db.DateTime, default=datetime.now, nullable=False) # 取货结束时间
     publish_time = db.Column(db.DateTime, default=datetime.now) # 发布时间
     is_deleted = db.Column(db.Boolean, default=False) # 删除标志
+    type = db.Column(db.Integer, default=1) # 0x01-热卖 0x02-上新 0x04-特价 0x08-预售
     status = db.Column(db.Integer, default=1) # 状态标志
     
     note = db.Column(db.Text) # 详细描述
@@ -289,7 +291,7 @@ class Promotion(db.Model):
     products = db.relationship('PromotionProduct', back_populates="promotion",
                                order_by="asc(PromotionProduct.index)")
     orders = db.relationship('Order', back_populates='promotion', order_by="desc(Order.index)")
-    addresses = db.relationship('PromotionAddress', back_populates='promotion')
+    #addresses = db.relationship('PromotionAddress', back_populates='promotion')
 
 
 class PromotionProduct(db.Model):
@@ -310,13 +312,13 @@ class PromotionProduct(db.Model):
     promotion = db.relationship("Promotion", back_populates="products")
     size = db.relationship("Size", backref=db.backref('orders', lazy='dynamic'))
 
-class PromotionAddress(db.Model):
-    __tablename__ = 'promotion_address'
-    promotion_id = db.Column(db.Integer, db.ForeignKey('promotion.id'), primary_key=True)
-    address_id = db.Column(db.Integer, db.ForeignKey('pickup_address.id'), primary_key=True)
-
-    promotion = db.relationship("Promotion", back_populates="addresses")
-    address = db.relationship('PickupAddress', back_populates='promotions')
+#class PromotionAddress(db.Model):
+#    __tablename__ = 'promotion_address'
+#    promotion_id = db.Column(db.Integer, db.ForeignKey('promotion.id'), primary_key=True)
+#    address_id = db.Column(db.Integer, db.ForeignKey('pickup_address.id'), primary_key=True)
+#
+#    promotion = db.relationship("Promotion", back_populates="addresses")
+#    address = db.relationship('PickupAddress', back_populates='promotions')
 
 
 class PickupAddress(db.Model):
@@ -331,7 +333,7 @@ class PickupAddress(db.Model):
     address = db.Column(db.String(512))
     longitude = db.Column(db.Numeric(10, 7)) # 经度
     latitude = db.Column(db.Numeric(10, 7)) # 纬度
-    checked = db.Column(db.Boolean, default=False)
+    status = db.Column(db.Integer)
     day = db.Column(db.Integer, default=0) # 32位标示31天, 为1的位表示不营业
     weekday = db.Column(db.SmallInteger, default=0) # 用其中的7位标识一周
     from_time = db.Column(db.String(8)) # just the time no date, 每天的营业开始时间
@@ -340,7 +342,8 @@ class PickupAddress(db.Model):
     shoppoint_id = db.Column(db.Integer, db.ForeignKey('shoppoint.id'), nullable=True)
     shoppoint = db.relationship('Shoppoint', backref=db.backref('addresses', lazy="dynamic"))
 
-    promotions = db.relationship('PromotionAddress', back_populates='address')
+    #promotions = db.relationship('PromotionAddress', back_populates='address')
+    orders = db.relationship("Order", back_populates="pickup_address")
 
 
 ## NO_PAY = 0
@@ -348,16 +351,16 @@ class PickupAddress(db.Model):
 ## VALUE_CARD_PAY = 2 # 储值卡
 ## WECHAT_PAY = 4
 ## ALI_PAY = 8
-class Payment(db.Model):
-    __tablename__ = 'payment'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(32))
-    needs = db.Column(db.SmallInteger) # 0-no need; 1-value card input; 2-appid and other info
-
-    shoppoint_id = db.Column(db.Integer, db.ForeignKey('shoppoint.id'), nullable=True)
-    shoppoint = db.relationship('Shoppoint', backref=db.backref('payments', lazy="dynamic"))
-
-    orders = db.relationship("OrderPayment", back_populates="payment")
+#class Payment(db.Model):
+#    __tablename__ = 'payment'
+#    id = db.Column(db.Integer, primary_key=True)
+#    name = db.Column(db.String(32))
+#    needs = db.Column(db.SmallInteger) # 0-no need; 1-value card input; 2-appid and other info
+#
+#    shoppoint_id = db.Column(db.Integer, db.ForeignKey('shoppoint.id'), nullable=True)
+#    shoppoint = db.relationship('Shoppoint', backref=db.backref('payments', lazy="dynamic"))
+#
+#    orders = db.relationship("OrderPayment", back_populates="payment")
 
 class Order(db.Model):
     __tablename__ = 'order'
@@ -382,6 +385,9 @@ class Order(db.Model):
 
     order_time = db.Column(db.DateTime, default=datetime.now) # 订单时间
     pay_time = db.Column(db.DateTime) # 支付时间
+    # 遇到现成订蛋糕，然后有买面包，生成2个订单
+    delivery_way = db.Column(db.SmallInteger, default=0) # 交付方式(按位与)，1-自提；2-快递
+    delivery_time = db.Column(db.DateTime, default=datetime.now) # 交付时间
     finished_time = db.Column(db.DateTime) # 收货时间
 
     note = db.Column(db.Text)
@@ -398,6 +404,8 @@ class Order(db.Model):
 
     # 订单地址1:1
     address = db.relationship('OrderAddress', uselist=False, back_populates='order')
+    pickup_address_id = db.Column(db.Integer, db.ForeignKey('pickup_address.id'))
+    pickup_address = db.relationship('PickupAddress', back_populates='orders')
     payments = db.relationship('OrderPayment', back_populates='order')
 
     shoppoint_id = db.Column(db.Integer, db.ForeignKey('shoppoint.id'), nullable=True)
@@ -453,12 +461,13 @@ class Order(db.Model):
                     pp.product.stock += op.amount
 
 class OrderPayment(db.Model):
-    order_code = db.Column(db.String(32), db.ForeignKey('order.code'), primary_key=True)
-    payment_id = db.Column(db.Integer, db.ForeignKey('payment.id'), primary_key=True)
-
+    __tablename__ = 'order_payment'
+    id = db.Column(db.Integer, primary_key=True)
+    order_code = db.Column(db.String(32), db.ForeignKey('order.code'))
+    #payment_id = db.Column(db.Integer, db.ForeignKey('payment.id'), primary_key=True)
+    payment_way = db.Integer()
     balance = db.Column(db.Integer, default=0) # 该支付方式支付的实际金额
-
-    payment = db.relationship("Payment", back_populates="orders")
+    #payment = db.relationship("Payment", back_populates="orders")
     order = db.relationship("Order", back_populates="payments")
 
 
@@ -485,10 +494,10 @@ class OrderAddress(db.Model):
 
     name = db.Column(db.String(128))
     phone = db.Column(db.String(12))
-    address = db.Column(db.String(1024))
-    # 遇到现成订蛋糕，然后有买面包，生成2个订单
-    delivery_way = db.Column(db.SmallInteger, default=0) # 交付方式(按位与)，1-自提；2-快递
-    delivery_time = db.Column(db.DateTime, default=datetime.now) # 交付时间
+    province = db.Column(db.String(32))
+    city = db.Column(db.String(32))
+    district = db.Column(db.String(32))
+    address = db.Column(db.String(512))
 
     order = db.relationship("Order", back_populates="address")
 
@@ -598,6 +607,7 @@ class MemberOpenidAddress(db.Model):
     address = db.Column(db.String(512))
     longitude = db.Column(db.Numeric(10, 7)) # 经度
     latitude = db.Column(db.Numeric(10, 7)) # 纬度
+    status = db.Column(db.Integer, default=0)
     is_default = db.Column(db.Boolean, default=False)
 
     openid = db.Column(db.String(64), db.ForeignKey('member_openid.openid')) # used in weixin

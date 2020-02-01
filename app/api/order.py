@@ -101,7 +101,7 @@ class OrderResource(BaseResource):
         parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
         parser.add_argument('X-PARTMENT', type=str, location='headers', required=True, help='access token must be required')
         parser.add_argument('X-VERSION', type=str, location='headers')
-        parser.add_argument('promotion_id', type=int, required=True, help='promotion id must be required')
+        #parser.add_argument('promotion_id', type=int, required=True, help='promotion id must be required')
         parser.add_argument('products', type=dict, action='append', required=True, help='product information must be required')
         parser.add_argument('delivery_way', type=int, required=True, help='delivery way must be required')
         parser.add_argument('pickup_address', type=int, required=True, help='pickup address must be required')
@@ -123,31 +123,31 @@ class OrderResource(BaseResource):
         mo.avatarUrl = data['avatarUrl']
         print('put order user: %s', mo)
 
-        promotion = Promotion.query.get(data['promotion_id'])
-        if promotion:
-            order = Order.query.filter_by(promotion_id=promotion.id, openid=mo.openid, payment_code=None, pay_time=None).first()
-            if not order:
-                order = Order()
-                order.promotion_id = promotion.id
-                order.openid = mo.openid
-                order.member_openid = mo
-                order.payment = promotion.payment
-                db.session.add(order)
-            else:
-                # delete order address and order products
-                OrderAddress.query.filter_by(order_code=order.code).delete()
-                #db.session.delete(order.address)
-                for p in order.products:
-                    db.session.delete(p) 
-                order.address = None
-                order.payment = promotion.payment
-                db.session.commit()
-        else:
-            order = Order()
-            order.openid = mo.openid
-            order.payment = 14
-            order.member_openid = mo
-            db.session.add(order)
+        #promotion = Promotion.query.get(data['promotion_id'])
+        #if promotion:
+        #    order = Order.query.filter_by(promotion_id=promotion.id, openid=mo.openid, payment_code=None, pay_time=None).first()
+        #    if not order:
+        #        order = Order()
+        #        order.promotion_id = promotion.id
+        #        order.openid = mo.openid
+        #        order.member_openid = mo
+        #        order.payment = promotion.payment
+        #        db.session.add(order)
+        #    else:
+        #        # delete order address and order products
+        #        OrderAddress.query.filter_by(order_code=order.code).delete()
+        #        #db.session.delete(order.address)
+        #        for p in order.products:
+        #            db.session.delete(p) 
+        #        order.address = None
+        #        order.payment = promotion.payment
+        #        db.session.commit()
+        #else:
+        order = Order()
+        order.openid = mo.openid
+        order.payment = 14
+        order.member_openid = mo
+        db.session.add(order)
 
         order.products = []
         order.code = datetime.now().strftime('%Y%m%d%%04d%H%M%S%f') % shop.id
@@ -161,6 +161,7 @@ class OrderResource(BaseResource):
         order.mode = 0
         #order.valuecard_allowed = promotion.valuecard_allowed if promotion else True
         order.note = data['note']
+        order.delivery_way = data['delivery_way']
         order.shoppoint_id = shop.id
         order.shoppoint = shop
         order.partment_id = partment.id
@@ -181,29 +182,29 @@ class OrderResource(BaseResource):
             op.product = product
             op.amount = p['want_amount']
 
-            if promotion:
-                if p['want_size'] > 0:
-                    pp = PromotionProduct.query.filter_by(promotion_id=promotion.id, product_id=product.id, size_id=size.id).first_or_404()
-                    print('the product in promotion: %s', pp)
-                    ps = ProductSize.query.get_or_404((product.id, size.id))
-                    op.size_id = size.id
-                    op.size = size
-                    op.price = pp.price if pp.price else product.promote_price
-                    op.price += ps.promote_price_plus
-                    order.original_cost += op.amount * (product.price+ps.price_plus)
-                else:
-                    pp = PromotionProduct.query.filter_by(promotion_id=promotion.id, product_id=product.id).first_or_404()
-                    print('the product in promotion: %s', pp)
-                    op.price = pp.price if pp.price else product.promote_price
-                    order.original_cost += op.amount * product.price
+            #if promotion:
+            #    if p['want_size'] > 0:
+            #        pp = PromotionProduct.query.filter_by(promotion_id=promotion.id, product_id=product.id, size_id=size.id).first_or_404()
+            #        print('the product in promotion: %s', pp)
+            #        ps = ProductSize.query.get_or_404((product.id, size.id))
+            #        op.size_id = size.id
+            #        op.size = size
+            #        op.price = pp.price if pp.price else product.promote_price
+            #        op.price += ps.promote_price_plus
+            #        order.original_cost += op.amount * (product.price+ps.price_plus)
+            #    else:
+            #        pp = PromotionProduct.query.filter_by(promotion_id=promotion.id, product_id=product.id).first_or_404()
+            #        print('the product in promotion: %s', pp)
+            #        op.price = pp.price if pp.price else product.promote_price
+            #        order.original_cost += op.amount * product.price
+            #else:
+            pp = None
+            if p['want_size']:
+                ps = ProductSize.query.get_or_404((product.id, size.id))
+                op.price = product.price + ps.price_plus
             else:
-                pp = None
-                if p['want_size']:
-                    ps = ProductSize.query.get_or_404((product.id, size.id))
-                    op.price = product.price + ps.price_plus
-                else:
-                    op.price = product.price
-                order.original_cost += op.amount * op.price
+                op.price = product.price
+            order.original_cost += op.amount * op.price
 
             #pp.sold += op.amount
             #pp.stock -= op.amount
@@ -219,14 +220,19 @@ class OrderResource(BaseResource):
 
         # address info
         oa = OrderAddress()
-        oa.delivery_way = data['delivery_way']
-        if oa.delivery_way == 1: # 自提模式
+        if order.delivery_way == 1: # 自提模式
             addr = PickupAddress.query.get(data['pickup_address'])
-        else: # 快递模式
-            addr = MemberOpenidAddress.query.get(data['delivery_address'])
-        oa.name = addr.contact
-        oa.phone = addr.phone
-        oa.address = addr.address
+            if not addr:
+                abort(400, STATUS_NO_RESOURCE, MESSAGES[STATUS_NO_RESOURCE])
+            order.pickup_address = addr
+        # user address info
+        delivery_addr = MemberOpenidAddress.query.get(data['delivery_address'])
+        oa.name = delivery_addr.contact
+        oa.phone = delivery_addr.phone
+        oa.province = delivery_addr.province
+        oa.city = delivery_addr.city
+        oa.district = delivery_addr.district
+        oa.address = delivery_addr.address
         order.address = oa
         db.session.add(oa)
 
@@ -238,7 +244,7 @@ class OrderResource(BaseResource):
 class OrdersResource(BaseResource):
     @marshal_with(order_fields)
     def get(self):
-        parser = RequestPapurser()
+        parser = RequestParser()
         parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
         parser.add_argument('status', type=str, location='args', required=True, help='order status must be required')
         parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')

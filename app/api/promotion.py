@@ -11,7 +11,7 @@ from flask_mail import Message
 from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, MESSAGES
 
 from ..models import db
-from ..models import Promotion, PromotionProduct, PromotionAddress
+from ..models import Promotion, PromotionProduct
 from ..models import Product, Shoppoint, PickupAddress
 from ..models import Order, Size
 
@@ -40,6 +40,7 @@ promotion_address_fields = {
 promotion_fields = {
     'id': fields.Integer,
     'name': fields.String,
+    'type': fields.Integer,
     'binding': fields.Boolean,
     'paymode': fields.Integer,
     'valuecard_allowed': fields.Boolean,
@@ -98,6 +99,7 @@ class PromotionResource(BaseResource):
         #parser.add_argument('delivery_way', type=int)
         #parser.add_argument('last_order_date', type=str, required=True, help='last order date should be required')
         #parser.add_argument('last_order_time', type=str, required=True, help='last order time should be required')
+        parser.add_argument('promote_type', type=int, required=True, help='promote type should be required')
         parser.add_argument('from_date', type=str, required=True, help='from date should be required')
         parser.add_argument('from_time', type=str, required=True, help='from time should be required')
         parser.add_argument('to_date', type=str, required=True, help='end date should be required')
@@ -135,6 +137,7 @@ class PromotionResource(BaseResource):
         #promotion.delivery_way = data['delivery_way']
         #promotion.delivery_fee = 0 if promotion.delivery_way == 1 else data['delivery_fee']
         #promotion.last_order_time = datetime.strptime(' '.join([data['last_order_date'], data['last_order_time']]), '%Y-%m-%d %H:%M')
+        promotion.type = data['promote_type']
         promotion.from_time = datetime.strptime(' '.join([data['from_date'], data['from_time']]), '%Y-%m-%d %H:%M')
         promotion.to_time = datetime.strptime(' '.join([data['to_date'], data['to_time']]), '%Y-%m-%d %H:%M')
         promotion.shoppoint_id = shop.id
@@ -158,8 +161,9 @@ class PromotionResource(BaseResource):
               pp.is_deleted = True
         for index, p in enumerate(data['products']):
             product = Product.query.get_or_404(p['id'])
+            product.promote_type = data['promote_type']
             product.promote_begin_time = datetime.strptime(' '.join([data['from_date'], data['from_time']]), '%Y-%m-%d %H:%M')
-            product.promote_end_time = datetime.strptime(' '.join([data['last_order_date'], data['last_order_time']]), '%Y-%m-%d %H:%M')
+            product.promote_end_time = datetime.strptime(' '.join([data['to_date'], data['to_time']]), '%Y-%m-%d %H:%M')
             if product.category and product.category.extra_info and product.category.extra_info & 1 == 1:
                 size = Size.query.get_or_404(p['size'])
                 pp = PromotionProduct.query.filter_by(promotion_id=promotion.id, product_id=product.id, size_id=size.id).first()
@@ -278,9 +282,9 @@ class PromotionsResource(BaseResource):
         if not args['limit']:
             args['limit'] = 10
         if args['manage']:
-            promotions = Promotion.query.filter_by(shoppoint_id=shop.id, is_deleted=False).order_by(Promotion.last_order_time.desc()).limit(args['limit']).all()
+            promotions = Promotion.query.filter_by(shoppoint_id=shop.id, is_deleted=False).order_by(Promotion.to_time.desc()).limit(args['limit']).all()
         else:
-            promotions = Promotion.query.filter(Promotion.shoppoint_id==shop.id, Promotion.is_deleted==False, Promotion.to_time>datetime.now()).order_by(Promotion.last_order_time.desc()).limit(args['limit']).all()
+            promotions = Promotion.query.filter(Promotion.shoppoint_id==shop.id, Promotion.is_deleted==False, Promotion.to_time>datetime.now()).order_by(Promotion.to_time.desc()).all()
 
         return promotions
 

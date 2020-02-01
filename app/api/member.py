@@ -38,8 +38,6 @@ openid_fields = {
     'avatarUrl': fields.String,
     'name': fields.String,
     'phone': fields.String,
-    'contact': fields.String,
-    'mobile': fields.String,
     'access_token': fields.String,
     'privilege': fields.Integer,
     'addresses': fields.List(fields.Nested(address_fields))
@@ -147,8 +145,6 @@ class DecryptResource(BaseResource):
         sessionKey = base64.b64decode(mo.session_key)
         encryptedData = base64.b64decode(data['encryptedData'])
         iv = base64.b64decode(data['iv'])
-
-        print('ccccccccccccc', sessionKey, iv)
 
         cipher = AES.new(sessionKey, AES.MODE_CBC, iv)
 
@@ -278,7 +274,7 @@ class OpenidAddressesResource(BaseResource):
         parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
         # parser.add_argument('date', type=lambda x: datetime.strptime(x,'%Y-%m-%dT%H:%M:%S'))
         args = parser.parse_args()
-        print('query member address request args: %s', args)
+        print('query member address request args:', args)
 
         shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
         mo = MemberOpenid.query.filter_by(access_token=args['X-ACCESS-TOKEN']).first_or_404()
