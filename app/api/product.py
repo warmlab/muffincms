@@ -16,7 +16,7 @@ from .base import BaseResource
 from .image import image_fields
 from .category import category_fields
 
-from .field import WebAllowedField, POSAllowedField, PromoteAllowedField, DateTimeField
+from .field import WebAllowedField, POSAllowedField, PromoteAllowedField, DateTimeField, InPromoteField 
 
 product_image_fields = {
     'index': fields.Integer,
@@ -63,6 +63,7 @@ product_fields = {
     'price': fields.Integer,
     'member_price': fields.Integer,
     'promote_price': fields.Integer,
+    'in_promote': InPromoteField(attribute='promote_type'),
     'stock': fields.Integer,
     'promote_stock': fields.Integer,
     'summary': fields.String,

@@ -20,3 +20,7 @@ class POSAllowedField(fields.Raw):
 class PromoteAllowedField(fields.Raw):
     def format(self, value):
         return value & 0x04
+
+class InPromoteField(fields.Raw):
+    def format(self, value):
+        return (value & 0x04) > 0
