@@ -83,7 +83,7 @@ class Message():
                 <Content><![CDATA[青岛市李沧区九水路227号宝龙城市广场彩虹城三层小麦芬烘焙课堂]]></Content>
             </xml>""" % (self.__properties['FromUserName'], self.__properties['ToUserName'], int(time()))
 
-        logger.debug('location message body: %s', body)
+        print('location message body:', body)
 
         return body
 
@@ -217,7 +217,7 @@ class Message():
 
             message = Message()
             for e in root:
-                logger.debug('xml tag=[%s], content=[%s]', e.tag, e.text)
+                #print('xml tag=[%s], content=[%s]' % (e.tag, e.text))
                 message.set_value(e.tag, e.text)
 
             return message

@@ -38,6 +38,9 @@ def access():
     openid = request.args.get('openid')
     body = request.data.decode('utf-8')
     message = Message.parse_message(body)
+    if not message:
+        abort(400)
+
     if message.type == 'event':
         return message.process_event()
     else:

@@ -24,9 +24,6 @@ def notify_admins(code, shoppoint_id):
     shoppoint = Shoppoint.query.get_or_404(shoppoint_id)
     # 获取订单信息
     order = Order.query.get_or_404(code)
-    if order.pay_time and order.payment_code: # 微信未支付
-        # do not to notify admin this order
-        return
     # 获取公众号的partment
     web = Partment.query.filter_by(shoppoint_id=shoppoint_id, code='web').first()
     if not web:

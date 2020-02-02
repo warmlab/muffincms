@@ -21,8 +21,9 @@ def notify(shopcode, partcode):
     #if not signature_verify():
     #    return
 
-    shoppoint = Shoppoint.query.filter_by(code=shopcode).first()
-    partment = Partment.query.filter_by(code=partcode).first()
+    print('request body', request.data.decode('utf-8'))
+    shoppoint = Shoppoint.query.filter_by(code=shopcode).first_or_404()
+    partment = Partment.query.filter_by(code=partcode).first_or_404()
     if not shoppoint or not partment:
         return "<xml><return_code><![CDATA[FAIL]]></return_code><return_msg><![CDATA[BAD REQUEST]]></return_msg></xml>", 400
 
@@ -47,14 +48,13 @@ def notify(shopcode, partcode):
     order.payment_code = message.get_value('transaction_id')
     if order.cost+order.delivery_fee == int(message.get_value('cash_fee')):
         order.pay_time = datetime.strptime(message.get_value('time_end'), '%Y%m%d%H%M%S')
-        if order.promotion:
-            order.commit_amount()
-            order.next_index()
+        #if order.promotion:
+        #    order.commit_amount()
+        #    order.next_index()
 
     #db.session.add(order)
     db.session.commit()
-
     notify_admins.delay(order.code, shoppoint.id)
-    notify_customer(order.code, partment.code, shoppoint.id, order.prepay_id)
+    notify_customer.delay(order.code, partment.code, shoppoint.id, order.prepay_id)
 
     return "<xml><return_code><![CDATA[SUCCESS]]></return_code><return_msg><![CDATA[OK]]></return_msg></xml>"
