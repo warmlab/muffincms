@@ -18,8 +18,9 @@ from ..models import Shoppoint, Partment, Order, Promotion, Product, MemberOpeni
 from ..models import OrderProduct, OrderAddress
 from ..models import PromotionProduct, MemberOpenidAddress, PickupAddress, ProductSize
 
-from .member import openid_fields
+from .member import openid_fields 
 from .product import product_fields
+from .address import address_fields as pickup_address_fields
 
 from .base import BaseResource
 from .field import DateTimeField
@@ -28,9 +29,10 @@ from .field import DateTimeField
 order_address_fields = {
     'name': fields.String,
     'phone': fields.String,
+    'province': fields.String,
+    'city': fields.String,
+    'district': fields.String,
     'address': fields.String,
-    'delivery_way': fields.Integer,
-    'delivery_time': fields.DateTime,
 }
 
 order_product_fields = {
@@ -54,6 +56,7 @@ order_fields = {
     'original_cost': fields.Integer,
     'cost': fields.Integer,
     'refund': fields.Integer,
+    'delivery_way': fields.Integer,
     'delivery_fee': fields.Integer,
     'refund_delivery_fee': fields.Integer,
     'mode': fields.Integer,
@@ -68,6 +71,7 @@ order_fields = {
     'promotion_id': fields.Integer,
     'products': fields.List(fields.Nested(order_product_fields)),
     'address': fields.Nested(order_address_fields),
+    'pickup_address': fields.Nested(pickup_address_fields)
 }
 
 #order_promotion_fields = order_fields
@@ -251,7 +255,7 @@ class OrdersResource(BaseResource):
         data = parser.parse_args()
 
         shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
-        mo = MemberOpenid.query.filter_by(access_token=data['X-ACCESS-TOKEN']).first()
+        mo = MemberOpenid.query.filter_by(access_token=data['X-ACCESS-TOKEN']).first_or_404()
 
         status = data['status']
         if status == 'wait':
