@@ -63,17 +63,19 @@ class ImageResource(BaseResource):
         parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
         parser.add_argument('upload-files', type=FileStorage, location='files', action="append", required=True, help='the upload files should be required')
         parser.add_argument('type', type=int)
+        parser.add_argument('title', type=str)
+        parser.add_argument('note', type=str)
         args = parser.parse_args()
 
         shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
 
         images = []
         upload_files = args['upload-files']
-        print('upload files: %s', upload_files)
+        print('upload files: ', upload_files)
         for upload_file in upload_files:
             hash_value = generate_hash_value(upload_file)
             filename = generate_filename(upload_file.filename)
-            print('upload file name: %s - %s', upload_file.filename, hash_value)
+            print('upload file name: ', upload_file.filename, ' hash value ', hash_value)
 
             image = Image.query.filter_by(hash_value=hash_value, shoppoint_id=shop.id).first()
             if not image:
@@ -81,6 +83,8 @@ class ImageResource(BaseResource):
                 image = Image()
                 image.hash_value = hash_value
                 image.name = filename
+                image.title = args['title']
+                image.note = args['note']
                 image.type = args['type']
                 image.shoppoint_id = shop.id
                 image.shoppoint = shop
@@ -90,6 +94,23 @@ class ImageResource(BaseResource):
                 db.session.add(image)
                 db.session.commit()
             else:
+              image.title = args['title']
+              image.note = args['note']
               image.type = args['type']
             images.append(image)
+        return images
+
+class ImagesResource(BaseResource):
+    @marshal_with(image_fields)
+    def get(self):
+        parser = RequestParser()
+        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
+        parser.add_argument('type', type=str, location='args', required=True, help='type  must be required by getting image list')
+        args = parser.parse_args()
+
+        print('args', args)
+
+        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
+        images = Image.query.filter_by(type=args['type'], shoppoint_id=shop.id).all()
+
         return images

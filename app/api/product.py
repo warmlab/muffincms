@@ -253,7 +253,8 @@ class ProductsResource(BaseResource):
     def get(self):
         parser = RequestParser()
         parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('type', type=int, location='args', required=True, help='terminal type should be required')
+        parser.add_argument('show_type', type=int, location='args', required=True, help='terminal type should be required')
+        parser.add_argument('promote_type', type=int, location='args')
         parser.add_argument('sort', type=str, location='args')
         parser.add_argument('limit', type=int, location='args')
         parser.add_argument('category', type=int, location='args')
@@ -261,24 +262,32 @@ class ProductsResource(BaseResource):
 
         print('GET request args: %s', data)
         shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
-        if data['category']:
+        if data['promote_type']:
+            now = str(datetime.now())
+            products = Product.query.filter(Product.shoppoint_id==shop.id,
+                                            Product.promote_type.op('&')(data['promote_type'])>0,
+                                            Product.show_allowed.op('&')(data['show_type'])>0,
+                                            db.cast(Product.promote_begin_time, db.Time) <= now,
+                                            db.cast(Product.promote_end_time, db.Time) >= now,
+                                            Product.is_deleted==False).order_by(Product.promote_index)
+        elif data['category']:
             category = ProductCategory.query.get_or_404(data['category'])
             products = Product.query.filter(Product.shoppoint_id==shop.id,
                                             Product.category_id==category.id,
                                             Product.stock > 0,
-                                            Product.show_allowed.op('&')(data['type'])>0,
+                                            Product.show_allowed.op('&')(data['show_type'])>0,
                                             Product.is_deleted==False)
 
         else:
           if data['sort'] == 'popular':
             products = Product.query.filter(Product.shoppoint_id==shop.id,
                                             Product.stock > 0,
-                                            Product.show_allowed.op('&')(data['type'])>0,
+                                            Product.show_allowed.op('&')(data['show_type'])>0,
                                             Product.is_deleted==False)
           else:
             products = Product.query.filter(Product.shoppoint_id==shop.id,
                                             Product.stock > 0,
-                                            Product.show_allowed.op('&')(data['type'])>0,
+                                            Product.show_allowed.op('&')(data['show_type'])>0,
                                             Product.is_deleted==False)
 
 

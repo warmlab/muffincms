@@ -145,6 +145,7 @@ class Product(db.Model):
     promote_sold = db.Column(db.Integer, default=0) # 促销卖了多少
     stock = db.Column(db.Integer, default=0) # 库存
     promote_stock = db.Column(db.Integer, default=0) # 建议的参与促销的库存
+    promote_index = db.Column(db.Integer, default=0) # 在促销列表中的排序
     to_point = db.Column(db.Boolean, default=False) # 是否参与积分
     payment = db.Column(db.Integer, default=15) # 该商品支持的支付方式 0x01-现金支付 0x02-储值卡支付 0x04-微信支付 0x08-支付宝支付
     promote_type = db.Column(db.Integer, default=1) # 0x01-热卖 0x02-上新 0x04-特价 0x08-预售
@@ -244,6 +245,9 @@ class Image(db.Model):
     title = db.Column(db.String(128)) # 图片主题
     note = db.Column(db.Text) # 图片详细描述
 
+    type = db.Column(db.Integer, default=1) # 1-banner 2-detail 4-ad
+    status = db.Column(db.Integer, default=1)
+
     shoppoint_id = db.Column(db.Integer, db.ForeignKey('shoppoint.id'), nullable=True)
     shoppoint = db.relationship('Shoppoint', backref=db.backref('images', lazy="dynamic"))
 
@@ -282,7 +286,7 @@ class Promotion(db.Model):
     is_deleted = db.Column(db.Boolean, default=False) # 删除标志
     type = db.Column(db.Integer, default=1) # 0x01-热卖 0x02-上新 0x04-特价 0x08-预售
     status = db.Column(db.Integer, default=1) # 状态标志
-    
+
     note = db.Column(db.Text) # 详细描述
 
     shoppoint_id = db.Column(db.Integer, db.ForeignKey('shoppoint.id'), nullable=True)

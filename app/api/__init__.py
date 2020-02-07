@@ -2,7 +2,7 @@ from flask import Blueprint
 from flask_restful import Api
 
 from .promotion import PromotionResource, PromotionsResource, PromotionOrdersResource
-from .image import ImageResource
+from .image import ImageResource, ImagesResource
 from .product import ProductResource, ProductsResource, SizesResource
 from .qrcode import QRCodeResource
 from .order import OrderResource, OrdersResource
@@ -20,6 +20,7 @@ api.add_resource(PromotionOrdersResource, '/promotion/orders')
 api.add_resource(PromotionsResource, '/promotions', endpoint='promotions_ep')
 
 api.add_resource(ImageResource, '/image')
+api.add_resource(ImagesResource, '/images')
 api.add_resource(CategoriesResource, '/categories')
 api.add_resource(ProductResource, '/product')
 api.add_resource(QRCodeResource, '/qrcode')
