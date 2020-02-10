@@ -258,6 +258,7 @@ class ProductsResource(BaseResource):
         parser.add_argument('sort', type=str, location='args')
         parser.add_argument('limit', type=int, location='args')
         parser.add_argument('category', type=int, location='args')
+        parser.add_argument('manage', type=int, location='args')
         data = parser.parse_args()
 
         print('GET request args: %s', data)
@@ -270,13 +271,19 @@ class ProductsResource(BaseResource):
                                             db.cast(Product.promote_begin_time, db.Time) <= now,
                                             db.cast(Product.promote_end_time, db.Time) >= now,
                                             Product.is_deleted==False).order_by(Product.promote_index)
+            if products.count() == 0 and data['promote_type'] == 0x10: # 没有本周推荐，就随机选在一些商品
+                products = Product.query.filter(Product.shoppoint_id==shop.id,
+                                            Product.show_allowed.op('&')(data['show_type'])>0,
+                                            #Product.stock > 0,
+                                            Product.is_deleted==False).order_by(Product.promote_index)
         elif data['category']:
             category = ProductCategory.query.get_or_404(data['category'])
             products = Product.query.filter(Product.shoppoint_id==shop.id,
                                             Product.category_id==category.id,
-                                            Product.stock > 0,
                                             Product.show_allowed.op('&')(data['show_type'])>0,
                                             Product.is_deleted==False)
+            if not data['manage']:
+                products.filter(Product.stock > 0)
 
         else:
           if data['sort'] == 'popular':

@@ -172,13 +172,13 @@ class PromotionResource(BaseResource):
                     pp.size = size
                     pp.size_id = size.id
                 else:
-                  pp.is_deleted = False  
+                  pp.is_deleted = False
             else:
                 pp = PromotionProduct.query.filter_by(promotion_id=promotion.id, product_id=product.id).first()
                 if not pp:
                     pp = PromotionProduct()
                 else:
-                  pp.is_deleted = False  
+                  pp.is_deleted = False
 
             pp.product = product
             pp.promotion = promotion

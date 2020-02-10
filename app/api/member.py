@@ -240,7 +240,7 @@ class OpenidAddressResource(BaseResource):
         address.province = data['province']
         address.city = data['city']
         address.district = data['district']
-        address.address = data['address']
+        address.address = data['address'].strip()
         address.openid = mo.openid
         if data['is_default']:
             MemberOpenidAddress.query.filter_by(openid=mo.openid).update({'is_default': False})

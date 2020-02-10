@@ -148,7 +148,7 @@ class Product(db.Model):
     promote_index = db.Column(db.Integer, default=0) # 在促销列表中的排序
     to_point = db.Column(db.Boolean, default=False) # 是否参与积分
     payment = db.Column(db.Integer, default=15) # 该商品支持的支付方式 0x01-现金支付 0x02-储值卡支付 0x04-微信支付 0x08-支付宝支付
-    promote_type = db.Column(db.Integer, default=1) # 0x01-热卖 0x02-上新 0x04-特价 0x08-预售
+    promote_type = db.Column(db.Integer, default=1) # 0x01-热卖 0x02-上新 0x04-特价 0x08-预售 0x10-本周推荐
     status = db.Column(db.Integer, default=0)
     summary = db.Column(db.Text)
     note = db.Column(db.Text)
