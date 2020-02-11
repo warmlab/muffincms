@@ -264,12 +264,12 @@ class ProductsResource(BaseResource):
         print('GET request args: %s', data)
         shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
         if data['promote_type']:
-            now = str(datetime.now())
+            now = datetime.now()
             products = Product.query.filter(Product.shoppoint_id==shop.id,
                                             Product.promote_type.op('&')(data['promote_type'])>0,
                                             Product.show_allowed.op('&')(data['show_type'])>0,
-                                            db.cast(Product.promote_begin_time, db.Time) <= now,
-                                            db.cast(Product.promote_end_time, db.Time) >= now,
+                                            Product.promote_begin_time <= now,
+                                            Product.promote_end_time >= now,
                                             Product.is_deleted==False).order_by(Product.promote_index)
             if products.count() == 0 and data['promote_type'] == 0x10: # 没有本周推荐，就随机选在一些商品
                 products = Product.query.filter(Product.shoppoint_id==shop.id,

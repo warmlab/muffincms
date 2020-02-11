@@ -218,6 +218,7 @@ class OpenidAddressResource(BaseResource):
         parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
         parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
         parser.add_argument('id', type=int)
+        parser.add_argument('openid', type=str)
         parser.add_argument('contact', type=str, required=True, help='contact name should be required')
         parser.add_argument('phone', type=str, required=True, help='phone should be required')
         parser.add_argument('province', type=str, required=True, help='phone should be required')
@@ -230,7 +231,10 @@ class OpenidAddressResource(BaseResource):
         print('GET request args: %s', data)
 
         shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
-        mo = MemberOpenid.query.filter_by(shoppoint_id=shop.id, access_token=data['X-ACCESS-TOKEN']).first_or_404()
+        mo = MemberOpenid.query.filter_by(shoppoint_id=shop.id, access_token=data['X-ACCESS-TOKEN']).first()
+        if not mo and data['openid']:
+            mo = MemberOpenid.query.filter_by(shoppoint_id=shop.id, openid=data['openid']).first_or_404()
+
         if data['id']:
             address = MemberOpenidAddress.query.get_or_404(data['id'])
         else:

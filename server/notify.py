@@ -58,8 +58,7 @@ def notify_admins(code, shoppoint_id):
                 "value": order.note
                 },
             "remark": {
-                "value": '送货地址: ' + order.address.name + '[' + order.address.phone + ']' + order.address.provice+order.address.city+order.address.district+order.address.address if order.delivery_way == 2 else '取货地址: ' + order.pickup_address.address
-                
+                "value": '送货地址: ' + order.address.name + '[' + order.address.phone + ']' + order.address.full_address() if order.delivery_way == 2 else '取货地址: ' + order.pickup_address.address
                 }
             }
 
@@ -101,7 +100,7 @@ def notify_customer(order_code, partment_code, shoppoint_id, form_id):
 
     if order.delivery_way == 2:
         template_id = 'BmAwxIPTXz1p5ymj3g04NxChpWWI4sbgdy1RPyXphnU'
-        data['thing8'] = order.address.name + '[' + order.address.phone + ']' + order.address.province+order.address.city+order.address.district+order.address.address
+        data['thing8'] = order.address.name + '[' + order.address.phone + ']' + order.address.full_address()
     else:
         template_id = 'BmAwxIPTXz1p5ymj3g04NwrfuwnEl-ySpeaHrv7kxss'
         data['thing21'] = order.pickup_address.address

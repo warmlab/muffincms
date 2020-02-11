@@ -102,6 +102,6 @@ class AddressesResource(BaseResource):
         #    print('no code argument in request')
         #    abort(400, status=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'pickup address code')
         shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
-        addresses = PickupAddress.query.filter_by(shoppoint_id=shop.id).all()
+        addresses = PickupAddress.query.filter_by(shoppoint_id=shop.id, status=1).all()
 
         return addresses

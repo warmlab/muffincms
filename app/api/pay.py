@@ -62,6 +62,7 @@ class PayResource(BaseResource):
                 order.payment_code = order.code
                 order.pay_time = datetime.now()
                 order.commit_amount()
+                db.session.commit()
                 notify_admins.delay(order.code, shop.id)
                 notify_customer.delay(order.code, partment.code, shop.id, data['formId'])
         else: # default pay is wechat

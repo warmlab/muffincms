@@ -505,6 +505,9 @@ class OrderAddress(db.Model):
 
     order = db.relationship("Order", back_populates="address")
 
+    def full_address(self):
+        return self.province + self.city + self.district + self.address
+
 class Staff(db.Model):
     __tablename__ = 'staff'
     id = db.Column(db.Integer, primary_key=True)
