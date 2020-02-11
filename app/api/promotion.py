@@ -137,7 +137,7 @@ class PromotionResource(BaseResource):
         #promotion.delivery_way = data['delivery_way']
         #promotion.delivery_fee = 0 if promotion.delivery_way == 1 else data['delivery_fee']
         #promotion.last_order_time = datetime.strptime(' '.join([data['last_order_date'], data['last_order_time']]), '%Y-%m-%d %H:%M')
-        promotion.type = data['promote_type']
+        promotion.type |= data['promote_type']
         promotion.from_time = datetime.strptime(' '.join([data['from_date'], data['from_time']]), '%Y-%m-%d %H:%M')
         promotion.to_time = datetime.strptime(' '.join([data['to_date'], data['to_time']]), '%Y-%m-%d %H:%M')
         promotion.shoppoint_id = shop.id

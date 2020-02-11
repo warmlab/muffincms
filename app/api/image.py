@@ -11,6 +11,8 @@ from flask_restful.reqparse import RequestParser
 
 from werkzeug.datastructures import FileStorage
 
+from PIL import Image as PLImage
+
 from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, MESSAGES
 
 from ..models import db
@@ -89,7 +91,11 @@ class ImageResource(BaseResource):
                 image.shoppoint_id = shop.id
                 image.shoppoint = shop
 
-                upload_file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+                original_file = os.path.join(current_app.config['UPLOAD_FOLDER'], 'full', filename)
+                upload_file.save(original_file) # original file
+                im = PLImage.open(original_file)
+                im.thumbnail((200,200))
+                im.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename), 'JPEG')
 
                 db.session.add(image)
                 db.session.commit()
