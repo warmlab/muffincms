@@ -1,8 +1,10 @@
+from datetime import datetime, timedelta
+
 from flask import request, abort
 from flask import render_template
 
 from .. import admin
-from ...models import Order, Shoppoint, Promotion
+from ...models import Order, Shoppoint
 
 
 @admin.route('/<shopcode>/order/info', methods=['GET'])
@@ -21,10 +23,10 @@ def order_info(shopcode):
 def order_list(shopcode):
   shop = Shoppoint.query.filter_by(code=shopcode).first_or_404()
   #code = request.args['code']
-  id = request.args['promotion']
-  if id:
-      promotion = Promotion.query.get_or_404(id)
+  #id = request.args['promotion']
+  #if id:
+      #promotion = Promotion.query.get_or_404(id)
 
-      return render_template('admin/order/list.html', promotion=promotion)
-  else:
-      abort(400)
+  now = datetime.now()+timedelta(days=-2)
+  orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.pay_time>now)
+  return render_template('admin/order/list.html', orders=orders)

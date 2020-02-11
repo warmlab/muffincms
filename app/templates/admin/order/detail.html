@@ -11,9 +11,9 @@
   </head>
   <body>
     <section class="member">
-	  {%-if order.promotion %}
+      {%-if order.promotion %}
       <span class="code">{%if order.index%}{{order.index}}{%else%}未支付-没有编号{%endif%}</span>
-	  {%-endif%}
+      {%-endif%}
       <img src="{{order.member_openid.avatarUrl}}"/>
       <span class="name">{%if order.member_openid.nickname%}{{order.member_openid.nickname}}{%else%}小麦芬烘焙{%endif%}</span>
     </section>
@@ -49,7 +49,7 @@
     </section>
     <section class="order">
       <span class="title">取货方式</span>
-      <span class="content">{%if order.address.delivery_way==1%}自提{%else%}快递{%endif%}</span>
+      <span class="content">{%if order.delivery_way==1%}自提{%else%}快递{%endif%}</span>
     </section>
     <section class="order">
       <span class="title">联系人</span>
@@ -57,7 +57,7 @@
     </section>
     <section class="order">
       <span class="title">交付地址</span>
-      <span class="content">{%if order.address%}{{order.address.address}}{%endif%}</span>
+      <span class="content">{%if order.delivery_way==2 %}{{order.address.full_address()}}{%else%}{{order.pickup_address.address}}{%endif%}</span>
     </section>
     <section class="order">
       <span class="title">下单时间</span>

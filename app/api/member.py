@@ -40,7 +40,7 @@ openid_fields = {
     'phone': fields.String,
     'access_token': fields.String,
     'privilege': fields.Integer,
-    'addresses': fields.List(fields.Nested(address_fields))
+    #'addresses': fields.List(fields.Nested(address_fields))
 }
 
 class LoginResource(Resource):
@@ -55,10 +55,10 @@ class LoginResource(Resource):
 
         shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
         if not args['code'] or not args['X-PARTMENT']:
-            print('no code and partment argument in request')
+            print('no code or partment argument in request')
             abort(400, status=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'member login code or partment code')
 
-        print('partment: %s', args['X-PARTMENT'])
+        print('partment: ', args['X-PARTMENT'])
         partment = Partment.query.filter_by(shoppoint_id=shop.id, code=args['X-PARTMENT']).first_or_404()
 
         data = (
@@ -68,14 +68,14 @@ class LoginResource(Resource):
             ('grant_type', 'authorization_code')
         )
 
-        print('request weixin data: %s', data)
+        print('request weixin data: ', data)
         r = UrlRequest('https://api.weixin.qq.com/sns/jscode2session?'+urlencode(data), method='GET')
         with urlopen(r) as s:
             result = s.read().decode('utf-8')
             info = json.loads(result)
-            print('result from weixin jscode2session: %s', info)
+            print('result from weixin jscode2session: ', info)
             if 'errcode' in info:
-                print('request weixin jscode2session failed: %s', info)
+                print('request weixin jscode2session failed: ', info)
                 abort(400, status=info['errcode'], message=info['errmsg'])
 
             mo = MemberOpenid.query.filter_by(openid=info['openid']).first()
@@ -103,7 +103,7 @@ class LoginResource(Resource):
 
             return mo
 
-        abort(405, status=STATUS_CANNOT_LOGIN, message=MESSAGES[STATUS_CANNOT_LOGIN] % args['code']) 
+        abort(405, status=STATUS_CANNOT_LOGIN, message=MESSAGES[STATUS_CANNOT_LOGIN] % args['code'])
 
 
 class TokenCheckerResource(BaseResource):
@@ -190,7 +190,7 @@ class OpenidResource(BaseResource):
         mo.phone = args['phone']
 
         return mo, 201
-        
+
 
 class OpenidAddressResource(BaseResource):
     @marshal_with(address_fields)
@@ -231,9 +231,7 @@ class OpenidAddressResource(BaseResource):
         print('GET request args: %s', data)
 
         shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
-        mo = MemberOpenid.query.filter_by(shoppoint_id=shop.id, access_token=data['X-ACCESS-TOKEN']).first()
-        if not mo and data['openid']:
-            mo = MemberOpenid.query.filter_by(shoppoint_id=shop.id, openid=data['openid']).first_or_404()
+        mo = MemberOpenid.query.filter_by(shoppoint_id=shop.id, access_token=data['X-ACCESS-TOKEN']).first_or_404()
 
         if data['id']:
             address = MemberOpenidAddress.query.get_or_404(data['id'])
@@ -282,7 +280,7 @@ class OpenidAddressesResource(BaseResource):
         print('query member address request args:', args)
 
         shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
-        mo = MemberOpenid.query.filter(db.or_(MemberOpenid.access_token==args['X-ACCESS-TOKEN'], MemberOpenid.openid==args['openid'])).first_or_404()
+        mo = MemberOpenid.query.filter_by(access_token=args['X-ACCESS-TOKEN']).first_or_404()
         addresses = MemberOpenidAddress.query.filter_by(openid=mo.openid).all()
 
         return addresses
