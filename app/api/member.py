@@ -276,12 +276,13 @@ class OpenidAddressesResource(BaseResource):
         parser = RequestParser()
         parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
         parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
+        parser.add_argument('openid', type=str, location='args')
         # parser.add_argument('date', type=lambda x: datetime.strptime(x,'%Y-%m-%dT%H:%M:%S'))
         args = parser.parse_args()
         print('query member address request args:', args)
 
         shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
-        mo = MemberOpenid.query.filter_by(access_token=args['X-ACCESS-TOKEN']).first_or_404()
+        mo = MemberOpenid.query.filter(db.or_(MemberOpenid.access_token==args['X-ACCESS-TOKEN'], MemberOpenid.openid==args['openid'])).first_or_404()
         addresses = MemberOpenidAddress.query.filter_by(openid=mo.openid).all()
 
         return addresses
