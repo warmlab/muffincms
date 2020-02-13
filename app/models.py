@@ -590,6 +590,9 @@ class MemberOpenid(db.Model):
         #print('session_keys:', self.session_key, data['session_key'])
         return self.session_key == data['session_key']
 
+    def __repr__(self):
+        return self.openid
+
     @staticmethod
     def verify_auth_token(token, secret_key):
         s = TimedSerializer(secret_key)

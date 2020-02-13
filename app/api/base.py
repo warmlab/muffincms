@@ -32,7 +32,7 @@ def authenticate(func):
         partment = Partment.query.filter_by(shoppoint_id=shop.id, code=data['X-PARTMENT']).first_or_404()
         mo = MemberOpenid.query.filter_by(access_token=data['X-ACCESS-TOKEN']).first()
         if not mo or not mo.verify_access_token(partment.secret_key):
-            abort(403, status=STATUS_TOKEN_INVALID, message=MESSAGES[STATUS_TOKEN_INVALID])
+            abort(401, status=STATUS_TOKEN_INVALID, message=MESSAGES[STATUS_TOKEN_INVALID])
 
         return func(*args, **kwargs)
     return wrapper

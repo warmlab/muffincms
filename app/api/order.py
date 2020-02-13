@@ -5,20 +5,20 @@ from urllib.parse import urlencode
 from urllib.request import urlopen
 from urllib.request import Request
 
-from flask import request, jsonify, url_for
+from flask import request, jsonify, url_for, json
 
 from flask_restful import abort
 from flask_restful import fields, marshal_with
 from flask_restful.reqparse import RequestParser
 
-from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, STATUS_NO_ORDER_STATUS, MESSAGES
+from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, STATUS_SOLD_OUT, STATUS_NO_ORDER_STATUS, MESSAGES
 
 from ..models import db
 from ..models import Shoppoint, Partment, Order, Promotion, Product, MemberOpenid, Size
 from ..models import OrderProduct, OrderAddress
 from ..models import PromotionProduct, MemberOpenidAddress, PickupAddress, ProductSize
 
-from .member import openid_fields 
+from .member import openid_fields
 from .product import product_fields
 from .address import address_fields as pickup_address_fields
 
@@ -175,8 +175,13 @@ class OrderResource(BaseResource):
         order.original_cost = 0
         order.cost = 0
         order.delivery_fee = 0 if data['delivery_way'] == 1 else 1000
+        soldouts = []
         for p in data['products']: # TODO if the products code in data['products'] are duplicated, a db error will be occurred
             product = Product.query.get_or_404(p['id']) # filter_by(code=p['code']).first_or_404()
+            if product.stock < p['want_amount']:
+                soldouts.append(product.to_json())
+                continue
+
             op = OrderProduct()
             if p['want_size'] > 0:
                 size = Size.query.get_or_404(p['want_size'])
@@ -185,6 +190,8 @@ class OrderResource(BaseResource):
             op.order = order
             op.product = product
             op.amount = p['want_amount']
+            product.sold = p['want_amount'] if not product.sold else product.sold+p['want_amount']
+            product.stock -= p['want_amount']
 
             #if promotion:
             #    if p['want_size'] > 0:
@@ -221,13 +228,15 @@ class OrderResource(BaseResource):
             order.cost += op.price * op.amount
             order.products.append(op)
             db.session.add(op)
+        if soldouts:
+            abort(406, status=STATUS_SOLD_OUT, message=MESSAGES[STATUS_NO_RESOURCE], data=json.dumps(soldouts))
 
         # address info
         oa = OrderAddress()
         if order.delivery_way == 1: # 自提模式
             addr = PickupAddress.query.get(data['pickup_address'])
             if not addr:
-                abort(400, STATUS_NO_RESOURCE, MESSAGES[STATUS_NO_RESOURCE])
+                abort(400, status=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE])
             order.pickup_address = addr
         # user address info
         delivery_addr = MemberOpenidAddress.query.get(data['delivery_address'])

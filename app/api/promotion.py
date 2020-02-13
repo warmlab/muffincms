@@ -137,7 +137,7 @@ class PromotionResource(BaseResource):
         #promotion.delivery_way = data['delivery_way']
         #promotion.delivery_fee = 0 if promotion.delivery_way == 1 else data['delivery_fee']
         #promotion.last_order_time = datetime.strptime(' '.join([data['last_order_date'], data['last_order_time']]), '%Y-%m-%d %H:%M')
-        promotion.type |= data['promote_type']
+        promotion.type = data['promote_type']
         promotion.from_time = datetime.strptime(' '.join([data['from_date'], data['from_time']]), '%Y-%m-%d %H:%M')
         promotion.to_time = datetime.strptime(' '.join([data['to_date'], data['to_time']]), '%Y-%m-%d %H:%M')
         promotion.shoppoint_id = shop.id
@@ -161,7 +161,10 @@ class PromotionResource(BaseResource):
               pp.is_deleted = True
         for index, p in enumerate(data['products']):
             product = Product.query.get_or_404(p['id'])
-            product.promote_type = data['promote_type']
+            if not product.promote_type:
+                product.promote_type = data['promote_type']
+            else:
+                product.promote_type |= data['promote_type']
             product.promote_begin_time = datetime.strptime(' '.join([data['from_date'], data['from_time']]), '%Y-%m-%d %H:%M')
             product.promote_end_time = datetime.strptime(' '.join([data['to_date'], data['to_time']]), '%Y-%m-%d %H:%M')
             if product.category and product.category.extra_info and product.category.extra_info & 1 == 1:
@@ -194,7 +197,9 @@ class PromotionResource(BaseResource):
             pp.price = product.promote_price + (size.promote_price_plus if p['size'] else 0)
             if p['stock']:
                 pp.stock = p['stock']
+                product.stock = p['stock']
             else:
+                product.promote_stock = p['stock']
                 pp.stock = product.promote_stock
 
         #promotion.addresses = []
