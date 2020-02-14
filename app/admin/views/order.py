@@ -28,5 +28,14 @@ def order_list(shopcode):
       #promotion = Promotion.query.get_or_404(id)
 
   now = datetime.now()+timedelta(days=-2)
-  orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.pay_time>now)
-  return render_template('admin/order/list.html', orders=orders)
+  orders = Order.query.filter(Order.shoppoint_id==shop.id)#, Order.pay_time>now)
+  dic = {}
+  for o in orders:
+      for p in o.products:
+          if p.product_id in dic:
+              dic[p.product_id].amount += p.amount
+          else:
+              p.product.amount = p.amount
+              dic[p.product_id] = p.product
+
+  return render_template('admin/order/list.html', orders=orders, products=dic)

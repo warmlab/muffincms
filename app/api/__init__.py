@@ -38,5 +38,5 @@ api.add_resource(OpenidAddressesResource, '/openid/addresses')
 
 api.add_resource(AddressResource, '/address')
 api.add_resource(AddressesResource, '/addresses')
-api.add_resource(ShoppointResource, '/info')
+api.add_resource(ShoppointResource, '/shopinfo')
 api.add_resource(PayResource, '/pay')

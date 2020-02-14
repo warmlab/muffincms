@@ -106,6 +106,20 @@
       <h4></h4>
       </hgroup>
     </header>
+    <section class="products">
+        <table class="table">
+			<tr>
+				<th scope="col">品种</th>
+				<th scope="col">数量</th>
+			<tr>
+            {%for product in products.values() -%}
+            <tr>
+                <td>{{product.name}}<td>
+                <td>{{product.amount}}</td>
+            <tr>
+            {% endfor %}
+        </table>
+    </section>
     <section class="orders">
           {% for order in orders -%}
       <a class="order" href="/admin/muffins/order/info?code={{order.code}}">
