@@ -1,10 +1,6 @@
 from datetime import datetime
 
-from flask import request
-
-from flask_restful import abort
-from flask_restful import fields, marshal_with
-from flask_restful.reqparse import RequestParser
+from flask import request, jsonify, abort
 
 from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, MESSAGES
 
@@ -12,157 +8,131 @@ from ..models import db
 from ..models import Shoppoint, Product, ProductCategory, Member
 from ..models import Size, Image, ProductImage, ProductSize
 
-from .base import BaseResource
-from .image import image_fields
-from .category import category_fields
+from . import api
+from .base import UserView, login_required
 
-from .field import WebAllowedField, POSAllowedField, PromoteAllowedField, DateTimeField, InPromoteField 
+@api.route('/categories', methods=['GET'])
+@login_required
+def category_list():
+    shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
+    categories = ProductCategory.query.filter_by(shoppoint_id=shop.id).order_by(ProductCategory.index).all()
+    if not categories:
+        abort(make_response(jsonify(errcode=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE]), 404))
 
-product_image_fields = {
-    'index': fields.Integer,
-    'type': fields.Integer,
-    'note': fields.String,
-    'image': fields.Nested(image_fields)
-}
+    return jsonify([c.to_json() for c in categories])
 
-size_fields = {
-    'id': fields.Integer,
-    'name': fields.String,
-    'value': fields.Integer,
-    'spec': fields.String,
-    'shared_min': fields.Integer,
-    'shared_max': fields.Integer,
-    'utensils': fields.Integer,
-    'pre_order_hours': fields.Integer,
-    'banner': fields.String,
-    'price_plus': fields.Integer,
-    'member_price_plus': fields.Integer,
-    'promote_price_plus': fields.Integer,
-}
+@api.route('/products', methods=['GET'])
+@login_required
+def products():
+    print('args', request.args)
+    shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
+    try:
+        show_type = int(request.args['show_type'])
+    except Exception as e:
+        show_type = 0
+    try:
+        promote_type = int(request.args['promote_type'])
+    except Exception as e:
+        promote_type = 0
+    if 'promote_type' in request.args:
+        now = datetime.now()
+        products = Product.query.filter(Product.shoppoint_id==shop.id,
+                                        Product.promote_type.op('&')(promote_type)>0,
+                                        Product.show_allowed.op('&')(show_type)>0,
+                                        Product.promote_begin_time <= now,
+                                        Product.promote_end_time >= now,
+                                        Product.stock > 0,
+                                        Product.is_deleted==False).order_by(Product.promote_index)
+        if products.count() == 0 and int(request.args.get('promote_type')) == 0x10: # 没有本周推荐，就随机选一些商品
+            products = Product.query.filter(Product.shoppoint_id==shop.id,
+                                        Product.show_allowed.op('&')(show_type)>0,
+                                        Product.stock > 0,
+                                        Product.is_deleted==False).order_by(Product.promote_index)
+    elif 'category' in request.args:
+        category = ProductCategory.query.get_or_404(request.args.get('category'))
+        products = Product.query.filter(Product.shoppoint_id==shop.id,
+                                        Product.category_id==category.id,
+                                        Product.show_allowed.op('&')(show_type)>0,
+                                        Product.is_deleted==False)
+        if not request.args.get('manage'):
+            products.filter(Product.stock > 0)
 
-product_size_fields = {
-#    'product': field.Nested(product_fields),
-    'size': fields.Nested(size_fields),
-    'index': fields.Integer,
-    'price_plus': fields.Integer,
-    'member_price_plus': fields.Integer,
-    'promote_price_plus': fields.Integer,
-    'stock': fields.Integer,
-    'promote_stock': fields.Integer,
-    'sold': fields.Integer,
-    'member_sold': fields.Integer,
-    'promote_sold': fields.Integer,
-}
+    else:
+        products = Product.query.filter(Product.shoppoint_id==shop.id,
+                                        Product.stock > 0,
+                                        Product.show_allowed.op('&')(show_type)>0,
+                                        Product.is_deleted==False)
 
-product_fields = {
-    'id': fields.Integer,
-    'code': fields.String,
-    'name': fields.String,
-    'english_name': fields.String,
-    'pinyin': fields.String,
-    'price': fields.Integer,
-    'member_price': fields.Integer,
-    'promote_price': fields.Integer,
-    'in_promote': InPromoteField(attribute='promote_type'),
-    'stock': fields.Integer,
-    'promote_stock': fields.Integer,
-    'summary': fields.String,
-    'note': fields.String,
-    'web_allowed': WebAllowedField(attribute='show_allowed'),
-    'pos_allowed': POSAllowedField(attribute='show_allowed'),
-    'promote_type': fields.Integer,
-    'promote_allowed': PromoteAllowedField(attribute='show_allowed'),
-    'promote_begin_time': DateTimeField(dt_format='%Y-%m-%d %H:%M:%S'),
-    'promote_end_time': DateTimeField(dt_format='%Y-%m-%d %H:%M:%S'),
-    'is_deleted': fields.Boolean,
-    'category': fields.Nested(category_fields),
-    'images': fields.List(fields.Nested(product_image_fields)),
-    'sizes': fields.List(fields.Nested(product_size_fields))
-}
 
-class ProductResource(BaseResource):
-    @marshal_with(product_fields)
+    if request.args.get('sort') == 'popular':
+      products = products.order_by(Product.sold.desc())
+
+    if request.args.get('limit'):
+      products = products.limit(request.args.get('limit')).all()
+    else:
+      products = products.all()
+
+    return jsonify([p.to_json() for p in products])
+
+@api.route('/product/sizes', methods=['GET'])
+@login_required
+def sizes():
+    shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
+    sizes = Size.query.filter(Size.shoppoint_id==shop.id).order_by(Size.index.asc()).all()
+
+    return jsonify([s.to_json() for s in sizes])
+
+class ProductView(UserView):
+    methods = ['GET', 'POST', 'DELETE']
+
     def get(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('code', type=str, location="args", help='product code should be required')
-        args = parser.parse_args()
-        print('GET request args: %s', args)
-        if not args['code']:
-            print('no code argument in request')
-            abort(400, status=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'product code')
+        if 'code' not in request.args:
+            abort(make_response(jsonify(errcode=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'product code'), 400))
 
-        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
-        product = Product.query.filter_by(shoppoint_id=shop.id, code=args['code'], is_deleted=False).first()
-        if not product:
-            print(MESSAGES[STATUS_NO_RESOURCE])
-            abort(404, status=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE])
+        shop = Shoppoint.query.filter_by(code=request.headers['X-SHOPPOINT']).first_or_404()
+        product = Product.query.filter_by(shoppoint_id=shop.id, code=request.args['code'], is_deleted=False).first_or_404()
+        #if not product:
+        #    abort(make_response(jsonify(errcode=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE]), 404))
 
-        return product
+        r = product.to_json()
+        r['category'] = product.category.to_json()
+        return jsonify(r)
 
-
-    @marshal_with(product_fields)
     def post(self):
-        is_new_product = False
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('code', type=str)
-        parser.add_argument('name', type=str, required=True, help='product name should be required')
-        parser.add_argument('english_name', type=str)
-        parser.add_argument('category', type=int)
-        parser.add_argument('price', type=int, required=True, help='product price should be required')
-        parser.add_argument('member_price', type=int, required=True, help='product member price should be required')
-        parser.add_argument('promote_price', type=int, required=True, help='product promote should be required')
-        parser.add_argument('web_allowed', type=bool)
-        parser.add_argument('promote_allowed', type=bool)
-        parser.add_argument('stock', type=int)
-        parser.add_argument('promote_stock')
-        parser.add_argument('summary', type=str)
-        parser.add_argument('note', type=str)
-        #parser.add_argument('banner', type=int)
-        parser.add_argument('images', type=dict, action="append")
-        parser.add_argument('to_remove_images', type=dict, action="append")
-        #parser.add_argument('sizes', type=dict, action="append")
-        parser.add_argument('sizes', type=dict, action="append")
-
-        data = parser.parse_args()
-        print(data)
-
-        shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
-        product = Product.query.filter_by(code=data['code'], is_deleted=False).first()
+        shop = Shoppoint.query.filter_by(code=request.header['X-SHOPPOINT']).first_or_404()
+        product = Product.query.filter_by(code=request.json.get('code'), is_deleted=False).first()
         if not product:
-            is_new_product = True
             product = Product()
             product.code = datetime.now().strftime('%Y%m%d%H%M%S%f')
             db.session.add(product)
 
-        product.name = data['name']
-        product.price = data['price']
-        product.member_price = data['member_price']
-        product.promote_price = data['promote_price']
-        product.english_name = data['english_name']
+        product.name = request.json.get('name')
+        product.price = request.json.get('price')
+        product.member_price = request.json.get('member_price')
+        product.promote_price = request.json.get('promote_price')
+        product.english_name = request.json.get('english_name')
         product.show_allowed = 2 # TODO POS allowed is default just now
-        if data['web_allowed']:
+        if request.json.get('web_allowed'):
             product.show_allowed |= 1
-        if data['promote_allowed']:
+        if request.json.get('promote_allowed'):
             product.show_allowed |= 4
-        #product.web_allowed = data['web_allowed']
-        #product.promote_allowed = data['promote_allowed']
-        product.summary =  data['summary']
-        product.note = data['note']
-        product.stock = data['stock']
+        #product.web_allowed = request.json.get('web_allowed')
+        #product.promote_allowed = request.json.get('promote_allowed')
+        product.summary =  request.json.get('summary')
+        product.note = request.json.get('note')
+        product.stock = request.json.get('stock')
 
         product.shoppoint_id = shop.id
         product.shoppoint = shop
 
-        category = ProductCategory.query.get_or_404(data['category'])
+        category = ProductCategory.query.get_or_404(request.json.get('category'))
         product.category_id = category.id
         product.category = category
 
         print(data)
         # remove image not needed
-        if data['to_remove_images']:
-          for photo in data['to_remove_images']:
+        if request.json.get('to_remove_images'):
+          for photo in request.json.get('to_remove_images'):
             image = Image.query.get(photo['id'])
             if image:
               pi = ProductImage.query.get((product.id, image.id))
@@ -172,15 +142,15 @@ class ProductResource(BaseResource):
                 else:
                   db.session.delete(pi)
 
-        #photos = [{'code': data['banner'], 'index': 0}]
-        #photos.extend(data['images'])
+        #photos = [{'code': request.json.get('banner'], 'index': 0})
+        #photos.extend(request.json.get('images'))
         photo_ids = []
-        if data['images']:
+        if request.json.get('images'):
           base_banner_index = db.session.query(db.func.max(ProductImage.index)).filter_by(product_id=product.id, type=1).scalar()
           base_detail_index = db.session.query(db.func.max(ProductImage.index)).filter_by(product_id=product.id, type=2).scalar()
           if base_banner_index is None: base_banner_index = 0
           if base_detail_index is None: base_detail_index = 0
-          for photo in data['images']:
+          for photo in request.json.get('images'):
             photo_ids.append(photo['id'])
             image = Image.query.get_or_404(photo['id'])
             #pi = None
@@ -208,7 +178,7 @@ class ProductResource(BaseResource):
             for ps in product.sizes:
                 db.session.delete(ps)
             product.sizes = []
-            for s in data['sizes']:
+            for s in request.json.get('sizes'):
                 size = Size.query.get_or_404(s['id'])
                 ps = ProductSize()
                 ps.product = product
@@ -224,97 +194,20 @@ class ProductResource(BaseResource):
 
         db.session.commit()
 
-        return product
+        return jsonify(product.to_json()), 201
 
-    @marshal_with(product_fields)
     def delete(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('code', type=str, help='product code should be required')
-        args = parser.parse_args()
-        print('GET request args: %s', args)
-        if not args['code']:
-            print('no code argument in request')
-            abort(400, status=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'product code')
-        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
-        product = Product.query.filter_by(shoppoint_id=shop.id, code=args['code'], is_deleted=False).first()
+        if 'code' not in request.args:
+            abort(make_response(jsonify(errcode=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'product code'), 400))
+        shop = Shoppoint.query.filter_by(code=request.headers['X-SHOPPOINT']).first_or_404()
+        product = Product.query.filter_by(shoppoint_id=shop.id, code=request.args['code'], is_deleted=False).first()
         if not product:
-            print(MESSAGES[STATUS_NO_RESOURCE])
-            abort(404, status=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE])
+            abort(make_response(jsonify(errcode=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE]), 404))
 
         product.is_deleted = True
         # TODO push a task into task queue to delete the related information of the product
         db.session.commit()
 
-        return product
+        return jsonify(product.to_json())
 
-class ProductsResource(BaseResource):
-    @marshal_with(product_fields)
-    def get(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('show_type', type=int, location='args', required=True, help='terminal type should be required')
-        parser.add_argument('promote_type', type=int, location='args')
-        parser.add_argument('sort', type=str, location='args')
-        parser.add_argument('limit', type=int, location='args')
-        parser.add_argument('category', type=int, location='args')
-        parser.add_argument('manage', type=int, location='args')
-        data = parser.parse_args()
-
-        print('GET request args: %s', data)
-        shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
-        if data['promote_type']:
-            now = datetime.now()
-            products = Product.query.filter(Product.shoppoint_id==shop.id,
-                                            Product.promote_type.op('&')(data['promote_type'])>0,
-                                            Product.show_allowed.op('&')(data['show_type'])>0,
-                                            Product.promote_begin_time <= now,
-                                            Product.promote_end_time >= now,
-                                            Product.stock > 0,
-                                            Product.is_deleted==False).order_by(Product.promote_index)
-            if products.count() == 0 and data['promote_type'] == 0x10: # 没有本周推荐，就随机选一些商品
-                products = Product.query.filter(Product.shoppoint_id==shop.id,
-                                            Product.show_allowed.op('&')(data['show_type'])>0,
-                                            Product.stock > 0,
-                                            Product.is_deleted==False).order_by(Product.promote_index)
-        elif data['category']:
-            category = ProductCategory.query.get_or_404(data['category'])
-            products = Product.query.filter(Product.shoppoint_id==shop.id,
-                                            Product.category_id==category.id,
-                                            Product.show_allowed.op('&')(data['show_type'])>0,
-                                            Product.is_deleted==False)
-            if not data['manage']:
-                products.filter(Product.stock > 0)
-
-        else:
-          if data['sort'] == 'popular':
-            products = Product.query.filter(Product.shoppoint_id==shop.id,
-                                            Product.stock > 0,
-                                            Product.show_allowed.op('&')(data['show_type'])>0,
-                                            Product.is_deleted==False)
-          else:
-            products = Product.query.filter(Product.shoppoint_id==shop.id,
-                                            Product.stock > 0,
-                                            Product.show_allowed.op('&')(data['show_type'])>0,
-                                            Product.is_deleted==False)
-
-
-        if data['sort'] == 'popular':
-          products = products.order_by(Product.sold.desc())
-        if data['limit']:
-          products = products.limit(data['limit']).all()
-        else:
-          products = products.all()
-
-        return products
-
-class SizesResource(BaseResource):
-    @marshal_with(size_fields)
-    def get(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        data = parser.parse_args()
-        shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
-        sizes = Size.query.filter(Size.shoppoint_id==shop.id).order_by(Size.index.asc()).all()
-
-        return sizes
+api.add_url_rule('/product', view_func=ProductView.as_view('product'))

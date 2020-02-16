@@ -7,10 +7,6 @@ from urllib.request import Request
 
 from flask import request, jsonify, url_for, json
 
-from flask_restful import abort
-from flask_restful import fields, marshal_with
-from flask_restful.reqparse import RequestParser
-
 from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, STATUS_SOLD_OUT, STATUS_NO_ORDER_STATUS, MESSAGES
 
 from ..models import db
@@ -18,113 +14,77 @@ from ..models import Shoppoint, Partment, Order, Promotion, Product, MemberOpeni
 from ..models import OrderProduct, OrderAddress
 from ..models import PromotionProduct, MemberOpenidAddress, PickupAddress, ProductSize
 
-from .member import openid_fields
-from .product import product_fields
-from .address import address_fields as pickup_address_fields
+#from .member import openid_fields
+#from .product import product_fields
+#from .address import address_fields as pickup_address_fields
 
-from .base import BaseResource
-from .field import DateTimeField
+from . import api
+from .base import UserView, login_required
 
 
-order_address_fields = {
-    'name': fields.String,
-    'phone': fields.String,
-    'province': fields.String,
-    'city': fields.String,
-    'district': fields.String,
-    'address': fields.String,
-}
-
-order_product_fields = {
-    'price': fields.Integer,
-    'amount': fields.Integer,
-    'refund': fields.Integer,
-    'product': fields.Nested(product_fields)
-}
-
-#payment_fields = {
-#    'appId': fields.String,
-#    'timeStamp': fields.String,
-#    'nonceStr': fields.String,
-#    'package': fields.String,
-#    'signType': fields.String
+#order_fields = {
+#    'code': fields.String,
+#    'index': fields.Integer,
+#    'original_cost': fields.Integer,
+#    'cost': fields.Integer,
+#    'refund': fields.Integer,
+#    'delivery_way': fields.Integer,
+#    'delivery_fee': fields.Integer,
+#    'refund_delivery_fee': fields.Integer,
+#    'mode': fields.Integer,
+#    'payment': fields.Integer,
+#    #'valuecard_allowed': fields.Boolean,
+#    'bonus_balance': fields.Integer,
+#    'prepay_id': fields.String,
+#    'order_time': DateTimeField(dt_format='%Y-%m-%d %H:%M:%S'),
+#    'pay_time': DateTimeField(dt_format='%Y-%m-%d %H:%M:%S'),
+#    'note': fields.String,
+#    'member_openid': fields.Nested(openid_fields),
+#    'promotion_id': fields.Integer,
+#    'products': fields.List(fields.Nested(order_product_fields)),
+#    'address': fields.Nested(order_address_fields),
+#    'pickup_address': fields.Nested(pickup_address_fields)
 #}
-
-order_fields = {
-    'code': fields.String,
-    'index': fields.Integer,
-    'original_cost': fields.Integer,
-    'cost': fields.Integer,
-    'refund': fields.Integer,
-    'delivery_way': fields.Integer,
-    'delivery_fee': fields.Integer,
-    'refund_delivery_fee': fields.Integer,
-    'mode': fields.Integer,
-    'payment': fields.Integer,
-    #'valuecard_allowed': fields.Boolean,
-    'bonus_balance': fields.Integer,
-    'prepay_id': fields.String,
-    'order_time': DateTimeField(dt_format='%Y-%m-%d %H:%M:%S'),
-    'pay_time': DateTimeField(dt_format='%Y-%m-%d %H:%M:%S'),
-    'note': fields.String,
-    'member_openid': fields.Nested(openid_fields),
-    'promotion_id': fields.Integer,
-    'products': fields.List(fields.Nested(order_product_fields)),
-    'address': fields.Nested(order_address_fields),
-    'pickup_address': fields.Nested(pickup_address_fields)
-}
 
 #order_promotion_fields = order_fields
 #order_promotion_fields['promotion'] = fields.Nested(promotion_fields)
 
-class OrderResource(BaseResource):
-    @marshal_with(order_fields)
+@api.route('/orders', methods=['GET'])
+@login_required
+def orders():
+    shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
+    mo = MemberOpenid.query.filter_by(access_token=request.headers.get('X-ACCESS-TOKEN')).first_or_404()
+
+    status = request.args.get('status')
+    if status == 'wait':
+        orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.openid==mo.openid, Order.mode==0, Order.payment_code==None, Order.pay_time==None).order_by(Order.code.desc()).all()
+    elif status == 'paid':
+        orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.openid==mo.openid, Order.mode==0, Order.payment_code!=None, Order.pay_time!=None, Order.finished_time==None).order_by(Order.code.desc()).all()
+    elif status == 'finished':
+        orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.openid==mo.openid, Order.mode==0, Order.payment_code!=None, Order.pay_time!=None, Order.finished_time!=None).order_by(Order.code.desc()).all()
+    else:
+        abort(make_response(jsonify(errcode=STATUS_NO_ORDER_STATUS, message=MESSAGES[STATUS_NO_ORDER_STATUS]), 400))
+
+    return jsonify([o.to_json() for o in orders])
+
+
+class OrderView(UserView):
     def get(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
-        parser.add_argument('X-VERSION', type=str, location='headers')
-        parser.add_argument('code', type=str, location='args', required=True, help='order code must be required')
-
-        data = parser.parse_args()
-        print('get order parameter: %s', data)
-
-        shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
-
+        shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
         # customer info
-        mo = MemberOpenid.query.filter_by(access_token=data['X-ACCESS-TOKEN']).first_or_404()
+        mo = MemberOpenid.query.filter_by(access_token=request.headers.get('X-ACCESS-TOKEN')).first_or_404()
+        order = Order.query.get_or_404(request.args.get('code'))
 
-        order = Order.query.get_or_404(data['code'])
+        return jsonify(order.to_json())
 
-        return order
-
-    @marshal_with(order_fields)
     def post(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
-        parser.add_argument('X-PARTMENT', type=str, location='headers', required=True, help='access token must be required')
-        parser.add_argument('X-VERSION', type=str, location='headers')
-        #parser.add_argument('promotion_id', type=int, required=True, help='promotion id must be required')
-        parser.add_argument('products', type=dict, action='append', required=True, help='product information must be required')
-        parser.add_argument('delivery_way', type=int, required=True, help='delivery way must be required')
-        parser.add_argument('pickup_address', type=int, required=True, help='pickup address must be required')
-        parser.add_argument('delivery_address', type=int, required=True, help='delivery address must be required')
-
-
-        parser.add_argument('nickname', type=str)
-        parser.add_argument('avatarUrl', type=str)
-        parser.add_argument('note', type=str)
-
-        data = parser.parse_args()
-
-        shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
-        partment = Partment.query.filter_by(shoppoint_id=shop.id, code=data['X-PARTMENT']).first_or_404()
+        shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
+        partment = Partment.query.filter_by(shoppoint_id=shop.id, code=request.headers.get('X-PARTMENT')).first_or_404()
 
         # customer info
-        mo = MemberOpenid.query.filter_by(access_token=data['X-ACCESS-TOKEN']).first_or_404()
-        mo.nickname = data['nickname']
-        mo.avatarUrl = data['avatarUrl']
+        mo = MemberOpenid.query.filter_by(access_token=request.headers.get('X-ACCESS-TOKEN')).first_or_404()
+        mo.nickname = request.json.get('nickname')
+        mo.avatarUrl = request.json.get('avatarUrl')
         print('put order user: %s', mo)
 
         #promotion = Promotion.query.get(data['promotion_id'])
@@ -156,16 +116,16 @@ class OrderResource(BaseResource):
         order.products = []
         order.code = datetime.now().strftime('%Y%m%d%%04d%H%M%S%f') % shop.id
         order.prepay_id=None
-        #if data['payment'] == 2:
-        #    mo.name = data['member_name']
-        #    mo.phone = data['member_phone']
+        #if request.json.get('payment') == 2:
+        #    mo.name = request.json.get('member_name')
+        #    mo.phone = request.json.get('member_phone')
         #order.member_openid = mo
         #order.openid = mo.openid
-        #order.payment = data['payment']
+        #order.payment = request.json.get('payment')
         order.mode = 0
         #order.valuecard_allowed = promotion.valuecard_allowed if promotion else True
-        order.note = data['note']
-        order.delivery_way = data['delivery_way']
+        order.note = request.json.get('note')
+        order.delivery_way = request.json.get('delivery_way')
         order.shoppoint_id = shop.id
         order.shoppoint = shop
         order.partment_id = partment.id
@@ -174,9 +134,9 @@ class OrderResource(BaseResource):
         # product info
         order.original_cost = 0
         order.cost = 0
-        order.delivery_fee = 0 if data['delivery_way'] == 1 else 1000
+        order.delivery_fee = 0 if request.json.get('delivery_way') == 1 else 1000
         soldouts = []
-        for p in data['products']: # TODO if the products code in data['products'] are duplicated, a db error will be occurred
+        for p in request.json.get('products'): # TODO if the products code in data['products') are duplicated, a db error will be occurred
             product = Product.query.get_or_404(p['id']) # filter_by(code=p['code']).first_or_404()
             if product.stock < p['want_amount']:
                 soldouts.append(product.to_json())
@@ -229,17 +189,17 @@ class OrderResource(BaseResource):
             order.products.append(op)
             db.session.add(op)
         if soldouts:
-            abort(406, status=STATUS_SOLD_OUT, message=MESSAGES[STATUS_NO_RESOURCE], data=json.dumps(soldouts))
+            abort(make_response(jsonify(errcode=STATUS_SOLD_OUT, message=MESSAGES[STATUS_NO_RESOURCE], data=json.dumps(soldouts)), 406))
 
         # address info
-        oa = OrderAddress()
         if order.delivery_way == 1: # 自提模式
-            addr = PickupAddress.query.get(data['pickup_address'])
+            addr = PickupAddress.query.get(request.json.get('pickup_address'))
             if not addr:
-                abort(400, status=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE])
+                abort(make_response(jsonify(errcode=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE]), 400))
             order.pickup_address = addr
         # user address info
-        delivery_addr = MemberOpenidAddress.query.get(data['delivery_address'])
+        delivery_addr = MemberOpenidAddress.query.get(request.json.get('delivery_address'))
+        oa = OrderAddress()
         oa.name = delivery_addr.contact
         oa.phone = delivery_addr.phone
         oa.province = delivery_addr.province
@@ -252,28 +212,6 @@ class OrderResource(BaseResource):
         db.session.add(order)
         db.session.commit()
 
-        return order
+        return jsonify(order.to_json())
 
-class OrdersResource(BaseResource):
-    @marshal_with(order_fields)
-    def get(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('status', type=str, location='args', required=True, help='order status must be required')
-        parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
-        data = parser.parse_args()
-
-        shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
-        mo = MemberOpenid.query.filter_by(access_token=data['X-ACCESS-TOKEN']).first_or_404()
-
-        status = data['status']
-        if status == 'wait':
-            orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.openid==mo.openid, Order.mode==0, Order.payment_code==None, Order.pay_time==None).order_by(Order.code.desc()).all()
-        elif status == 'paid':
-            orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.openid==mo.openid, Order.mode==0, Order.payment_code!=None, Order.pay_time!=None, Order.finished_time==None).order_by(Order.code.desc()).all()
-        elif status == 'finished':
-            orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.openid==mo.openid, Order.mode==0, Order.payment_code!=None, Order.pay_time!=None, Order.finished_time!=None).order_by(Order.code.desc()).all()
-        else:
-            abort(400, status=STATUS_NO_ORDER_STATUS, message=MESSAGES[STATUS_NO_ORDER_STATUS])
-
-        return orders
+api.add_url_rule('/order', view_func=OrderView.as_view('order'))

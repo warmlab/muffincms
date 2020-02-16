@@ -1,14 +1,13 @@
 from functools import wraps
 
-from flask_restful import abort
-from flask_restful import Resource
-
-from flask_restful.reqparse import RequestParser
+from flask import request, jsonify, abort, make_response
+from flask.views import View
 
 from ..models import Shoppoint, Partment, MemberOpenid
-from ..status import STATUS_NO_REQUIRED_HEADERS, STATUS_TOKEN_INVALID, MESSAGES
+from ..status import STATUS_NO_REQUIRED_HEADERS, STATUS_TOKEN_INVALID, STATUS_METHOD_NOT_ALLOWED, MESSAGES
 
-def authenticate(func):
+
+def login_required(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         if not getattr(func, 'authenticated', True):
@@ -17,25 +16,34 @@ def authenticate(func):
         #print('the function args: %s - %s', args, kwargs)
         #shop = Shoppoint.query.filter_by(code=kwargs['shopcode']).first_or_404()
         #acct = basic_authentication()  # custom account lookup function
-        parser = RequestParser()
-        parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('X-PARTMENT', type=str, location='headers', required=True, help='partment code must be required')
-        parser.add_argument('X-VERSION', type=str, location='headers')
-
-        data = parser.parse_args()
-        if not data['X-ACCESS-TOKEN'] or not data['X-VERSION'] or not data['X-SHOPPOINT']:
-            abort(400, status=STATUS_NO_REQUIRED_HEADERS, message=MESSAGES[STATUS_NO_REQUIRED_HEADERS])
+        print('login_required')
+        if not request.headers.get('X-ACCESS-TOKEN') or \
+           not request.headers.get('X-VERSION') or \
+           not request.headers.get('X-SHOPPOINT'):
+            abort(make_response(jsonify(errcode=STATUS_NO_REQUIRED_HEADERS, message=MESSAGES[STATUS_NO_REQUIRED_HEADERS]), 400))
 
 
-        shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
-        partment = Partment.query.filter_by(shoppoint_id=shop.id, code=data['X-PARTMENT']).first_or_404()
-        mo = MemberOpenid.query.filter_by(access_token=data['X-ACCESS-TOKEN']).first()
+        shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
+        partment = Partment.query.filter_by(shoppoint_id=shop.id, code=request.headers.get('X-PARTMENT')).first_or_404()
+        mo = MemberOpenid.query.filter_by(access_token=request.headers.get('X-ACCESS-TOKEN')).first()
         if not mo or not mo.verify_access_token(partment.secret_key):
-            abort(401, status=STATUS_TOKEN_INVALID, message=MESSAGES[STATUS_TOKEN_INVALID])
+            abort(make_response(jsonify(errcode=STATUS_TOKEN_INVALID, message=MESSAGES[STATUS_TOKEN_INVALID]), 406))
 
         return func(*args, **kwargs)
     return wrapper
 
-class BaseResource(Resource):
-    method_decorators = [authenticate]
+
+class UserView(View):
+    methods = ['GET', 'POST']
+    decorators = [login_required]
+
+    def dispatch_request(self):
+        print('method name', request.method)
+        method_name = request.method
+        if method_name in self.__class__.methods and method_name.lower() in self.__class__.__dict__:
+            return getattr(self, method_name.lower())()
+        else:
+            return jsonify({"status": STATUS_METHOD_NOT_ALLOWED, "message": MESSAGES[STATUS_METHOD_NOT_ALLOWED]}), 405
+
+class AdminView(UserView):
+    decorators = [login_required]

@@ -32,9 +32,9 @@ def notify_admins(code, shoppoint_id):
     products = ['x'.join([p.product.name + ('' if not p.size else '['+p.size.name+']'), str(p.amount)]) for p in order.products]
 
     if order.member_openid.name and order.member_openid.phone:
-        first = '会员: ' + order.member_openid.name + '[' + order.member_openid.phone + ']'
+        first = '会员: ' + order.member_openid.name + ' [' + order.member_openid.phone + '] ' + order.address.address
     else:
-        first = '顾客: ' + order.address.name + '[' + order.address.phone + ']'
+        first = '顾客: ' + order.address.name + ' [' + order.address.phone + '] ' + order.address.address
 
     url = ''.join(['https://wecakes.com/admin/', shoppoint.code, '/order/info?code=', order.code])
 

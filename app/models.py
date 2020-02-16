@@ -1,4 +1,5 @@
-import json
+from inspect import ismethod
+from flask import json
 
 from time import time
 from datetime import datetime
@@ -17,8 +18,34 @@ from itsdangerous import SignatureExpired, BadSignature
 
 db = SQLAlchemy()
 
-class Shoppoint(db.Model):
+class BaseModel(db.Model):
+    __abstract__ = True
+    _include_column_ = []
+
+    def to_json(self):
+        dic = {}
+        for k in self.__class__._include_column_:
+            value = getattr(self, k)
+            if isinstance(value, list):
+                values = []
+                for v in value:
+                    if isinstance(v, BaseModel):
+                        values.append(v.to_json())
+
+                dic[k] = values
+            else:
+                if isinstance(value, BaseModel):
+                    dic[k] = value.to_json()
+                elif isinstance(value, datetime):
+                    dic[k] = value.strftime('%Y-%m-%d %H:%M')
+                else:
+                    dic[k] = value
+
+        return dic
+
+class Shoppoint(BaseModel):
     __tablename__ = 'shoppoint'
+    _include_column_ = ['code', 'name', 'contact', 'mobile', 'address', 'banner', 'note']
 
     id = db.Column(db.Integer, primary_key=True)
     code = db.Column(db.String(8), unique=True, index=True)
@@ -45,8 +72,9 @@ class Shoppoint(db.Model):
     #mail_sender = db.Column(db.String(64))
 
 # 一个店通常有多个分部
-class Partment(db.Model):
+class Partment(BaseModel):
     __tablename__ = 'partment'
+    _include_column_ = ['name']
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(32)) # 分支名称
     code = db.Column(db.String(32)) # 分支代码
@@ -101,8 +129,10 @@ class Partment(db.Model):
             return self.access_token
         return ''
 
-class ProductCategory(db.Model):
+class ProductCategory(BaseModel):
     __tablename__ = 'product_category'
+    _include_column_ = ['id', 'name', 'extra_info', 'index', 'show_allowed', 'to_point', 'summary', 'note']
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), index=True, nullable=False)
     english_name = db.Column(db.String(128), index=True)
@@ -125,14 +155,11 @@ class ProductCategory(db.Model):
     def __repr__(self):
         return self.name
 
-    def to_json(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-        }
-
-class Product(db.Model):
+class Product(BaseModel):
     __tablename__ = 'product'
+    _include_column_ = ['id', 'code', 'name', 'price', 'member_price', 'promote_price', 'sold', 'promote_sold', 'stock',
+                        'promote_type','summary', 'note', 'show_allowed', 'category_id', 'promote_begin_time',
+                        'promote_end_time', 'images', 'sizes']
     id = db.Column(db.Integer, primary_key=True)
     code = db.Column(db.String(32), nullable=False, unique=True, index=True)
     name = db.Column(db.String(128), unique=True, index=True)
@@ -178,22 +205,11 @@ class Product(db.Model):
     def __repr__(self):
         return self.name
 
-    def to_json(self):
-        return {
-            'id': self.id,
-            'code': self.code,
-            'name': self.name,
-            'price': self.price,
-            'stock': self.stock,
-            'promote_stock': self.promote_stock,
-            'member_price': self.member_price,
-            'promote_begin_time': self.promote_begin_time,
-            'promote_end_time': self.promote_end_time
-        }
 
-
-class Size(db.Model):
+class Size(BaseModel):
     __tablename__ = 'size'
+    _include_column_ = ['id', 'name', 'value']
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64)) # 尺寸名称，如‘6寸’
     value = db.Column(db.Integer) # size value used in system
@@ -215,7 +231,7 @@ class Size(db.Model):
 
     products = db.relationship('ProductSize', back_populates='size')
 
-class ProductSize(db.Model): # 产品尺寸，一般用于蛋糕
+class ProductSize(BaseModel): # 产品尺寸，一般用于蛋糕
     __tablename__ = 'product_size'
     #id = db.Column(db.Integer, primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), primary_key=True)
@@ -235,8 +251,9 @@ class ProductSize(db.Model): # 产品尺寸，一般用于蛋糕
     size = db.relationship('Size', back_populates='products')
 
 
-class Image(db.Model):
+class Image(BaseModel):
     __tablename__ = 'image'
+    _include_column_ = ['id', 'name', 'title', 'note', 'type']
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), index=True) # 图片存储时的名字
@@ -256,8 +273,9 @@ class Image(db.Model):
     def __repr__(self):
         return self.name
 
-class ProductImage(db.Model):
+class ProductImage(BaseModel):
     __tablename__ = 'product_image'
+    _include_column_ = ['product_id', 'index', 'type', 'image']
 
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), primary_key=True)
     image_id = db.Column(db.Integer, db.ForeignKey('image.id'), primary_key=True)
@@ -268,8 +286,9 @@ class ProductImage(db.Model):
     product = db.relationship("Product", back_populates="images")
     image = db.relationship('Image', back_populates='products')
 
-class Promotion(db.Model):
+class Promotion(BaseModel):
     __tablename__ = 'promotion'
+    _include_column_ = ['id', 'name', 'last_order_time', 'from_time', 'to_time', 'type', 'note', 'products']
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64)) # used in weixin
     binding = db.Column(db.Boolean, default=True) # true-捆绑销售
@@ -298,8 +317,9 @@ class Promotion(db.Model):
     #addresses = db.relationship('PromotionAddress', back_populates='promotion')
 
 
-class PromotionProduct(db.Model):
+class PromotionProduct(BaseModel):
     __tablename__ = 'promotion_product'
+    _include_column_ = ['price', 'sold', 'stock', 'product']
 
     id = db.Column(db.Integer, primary_key=True)
     promotion_id = db.Column(db.Integer, db.ForeignKey('promotion.id'))
@@ -316,7 +336,12 @@ class PromotionProduct(db.Model):
     promotion = db.relationship("Promotion", back_populates="products")
     size = db.relationship("Size", backref=db.backref('orders', lazy='dynamic'))
 
-#class PromotionAddress(db.Model):
+    promote_type = db.Column(db.Integer, default=1) # 0x01-热卖 0x02-上新 0x04-特价 0x08-预售 0x10-本周推荐
+    promote_begin_time = db.Column(db.DateTime) # 促销开始时间
+    promote_end_time = db.Column(db.DateTime) # 促销结束时间
+    status = db.Column(db.Integer, default=1) # 状态标志
+
+#class PromotionAddress(BaseModel):
 #    __tablename__ = 'promotion_address'
 #    promotion_id = db.Column(db.Integer, db.ForeignKey('promotion.id'), primary_key=True)
 #    address_id = db.Column(db.Integer, db.ForeignKey('pickup_address.id'), primary_key=True)
@@ -325,8 +350,9 @@ class PromotionProduct(db.Model):
 #    address = db.relationship('PickupAddress', back_populates='promotions')
 
 
-class PickupAddress(db.Model):
+class PickupAddress(BaseModel):
     __tablename__ = 'pickup_address'
+    _include_column_ = ['id', 'contact', 'phone', 'province', 'city', 'district', 'address', 'from_time', 'to_time', 'status']
 
     id = db.Column(db.Integer, primary_key=True)
     contact = db.Column(db.String(32))
@@ -355,7 +381,7 @@ class PickupAddress(db.Model):
 ## VALUE_CARD_PAY = 2 # 储值卡
 ## WECHAT_PAY = 4
 ## ALI_PAY = 8
-#class Payment(db.Model):
+#class Payment(BaseModel):
 #    __tablename__ = 'payment'
 #    id = db.Column(db.Integer, primary_key=True)
 #    name = db.Column(db.String(32))
@@ -366,8 +392,9 @@ class PickupAddress(db.Model):
 #
 #    orders = db.relationship("OrderPayment", back_populates="payment")
 
-class Order(db.Model):
+class Order(BaseModel):
     __tablename__ = 'order'
+    _include_column_ = ['code', 'payment_code', 'index', 'cost', 'delivery_fee', 'refund', 'mode', 'payment', 'order_time', 'pay_time', 'note', 'openid', 'products', 'pickup_address', 'address']
 
     code = db.Column(db.String(32), primary_key=True, index=True) # 订单编号
     payment_code = db.Column(db.String(128), nullable=True) # 第三方支付平台订单编号
@@ -442,7 +469,6 @@ class Order(db.Model):
                 if pp.product_id == op.product_id:
                     pp.sold += op.amount
                     pp.stock -= op.amount
-                    
                     pp.product.promote_sold = op.amount if not pp.product.promote_sold else pp.product.promote_sold + op.amount
                     pp.product.sold = op.amount if not pp.product.sold else pp.product.sold + op.amount
                     pp.product.promote_stock = -op.amount if not pp.product.promote_stock else pp.product.promote_stock - op.amount
@@ -458,13 +484,12 @@ class Order(db.Model):
                 if pp.product_id == op.product_id:
                     pp.sold -= op.amount
                     pp.stock += op.amount
-                    
                     pp.product.promote_sold -= op.amount
                     pp.product.sold -= op.amount
                     pp.product.promote_stock += op.amount
                     pp.product.stock += op.amount
 
-class OrderPayment(db.Model):
+class OrderPayment(BaseModel):
     __tablename__ = 'order_payment'
     id = db.Column(db.Integer, primary_key=True)
     order_code = db.Column(db.String(32), db.ForeignKey('order.code'))
@@ -475,8 +500,9 @@ class OrderPayment(db.Model):
     order = db.relationship("Order", back_populates="payments")
 
 
-class OrderProduct(db.Model):
+class OrderProduct(BaseModel):
     __tablename__ = 'order_product'
+    _include_column_ = ['product', 'amount', 'price']
 
     id = db.Column(db.Integer, primary_key=True)
     order_code = db.Column(db.String(32), db.ForeignKey('order.code'))
@@ -491,8 +517,9 @@ class OrderProduct(db.Model):
     product = db.relationship("Product", back_populates="orders")
     size = db.relationship("Size", backref=db.backref('order_products', lazy='dynamic'))
 
-class OrderAddress(db.Model):
+class OrderAddress(BaseModel):
     __tablename__ = 'order_address'
+    _include_column_ = ['name', 'phone', 'province', 'city', 'district', 'address']
 
     order_code = db.Column(db.String(32), db.ForeignKey('order.code'), primary_key=True)
 
@@ -508,7 +535,7 @@ class OrderAddress(db.Model):
     def full_address(self):
         return self.province + self.city + self.district + self.address
 
-class Staff(db.Model):
+class Staff(BaseModel):
     __tablename__ = 'staff'
     id = db.Column(db.Integer, primary_key=True)
     openid = db.Column(db.String(64), primary_key=True) # used in weixin
@@ -524,7 +551,7 @@ class Staff(db.Model):
                          backref=db.backref('staffs', lazy="dynamic"))
 
 
-class Member(db.Model):
+class Member(BaseModel):
     __tablename__ = 'member'
     id = db.Column(db.Integer, primary_key=True)
     code = db.Column(db.String(64), unique=True, index=True, nullable=True) # 实体会员卡的卡面卡号，没有实体卡，可以使用用户名
@@ -546,8 +573,9 @@ class Member(db.Model):
     shoppoint = db.relationship('Shoppoint',
                          backref=db.backref('members', lazy="dynamic"))
 
-class MemberOpenid(db.Model):
+class MemberOpenid(BaseModel):
     __tablename__ = 'member_openid'
+    _include_column_ = ['openid', 'nickname', 'avatarUrl', 'privilege', 'name', 'phone', 'access_token']
     openid = db.Column(db.String(64), primary_key=True) # used in weixin
     nickname = db.Column(db.String(128)) # used in weixin
     avatarUrl = db.Column(db.String(2048))
@@ -605,8 +633,9 @@ class MemberOpenid(db.Model):
 
         return MemeberOpenid.query.get(data['openid'])
 
-class MemberOpenidAddress(db.Model):
+class MemberOpenidAddress(BaseModel):
     __tablename__ = 'openid_address'
+    _include_column_ = ['id', 'contact', 'phone', 'province', 'city', 'district', 'address']
 
     id = db.Column(db.Integer, primary_key=True)
     contact = db.Column(db.String(128))
@@ -625,7 +654,7 @@ class MemberOpenidAddress(db.Model):
 
 
 # 主要记录会员充值/消费记录
-class History(db.Model):
+class History(BaseModel):
     __tablename__ = 'history'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -643,7 +672,7 @@ class History(db.Model):
     address = db.relationship('HistoryAddress', uselist=False, back_populates='history')
     products = db.relationship('HistoryProduct', back_populates='history')
 
-class HistoryProduct(db.Model):
+class HistoryProduct(BaseModel):
     __tablename__ = 'history_product'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -659,7 +688,7 @@ class HistoryProduct(db.Model):
     size = db.relationship("Size", backref=db.backref('history_products', lazy='dynamic'))
 
 # History:Address=1:N
-class HistoryAddress(db.Model):
+class HistoryAddress(BaseModel):
     __tablename__ = 'history_address'
 
     history_id = db.Column(db.Integer, db.ForeignKey('history.id'), primary_key=True)

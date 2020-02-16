@@ -1,10 +1,6 @@
 from datetime import datetime
 
-from flask import request, jsonify, render_template
-
-from flask_restful import abort
-from flask_restful import fields, marshal_with
-from flask_restful.reqparse import RequestParser
+from flask import request, jsonify, render_template, abort, make_response
 
 from flask_mail import Message
 
@@ -15,158 +11,118 @@ from ..models import Promotion, PromotionProduct
 from ..models import Product, Shoppoint, PickupAddress
 from ..models import Order, Size
 
-from .product import product_fields, size_fields
-from .address import address_fields
-from .order import order_fields
-from .base import BaseResource
-from .field import DateTimeField
+from . import api
+from .base import UserView, login_required
 
 from .. import mail
 
 
-promotion_product_fields = {
-    'price': fields.Integer,
-    'sold': fields.Integer,
-    'stock': fields.Integer,
-    'product': fields.Nested(product_fields),
-    'size': fields.Nested(size_fields),
-    'is_deleted': fields.Boolean
-}
+@api.route('/promotions', methods=['GET'])
+@login_required
+def promotions():
+    shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
+    if 'limit' not in request.args:
+        limit = 10
+    else:
+        limit = request.args.get('limit')
 
-promotion_address_fields = {
-    'address': fields.Nested(address_fields)
-}
+    if 'manage' in request.args:
+        promotions = Promotion.query.filter_by(shoppoint_id=shop.id, is_deleted=False).order_by(Promotion.to_time.desc()).limit(limit).all()
+    else:
+        promotions = Promotion.query.filter(Promotion.shoppoint_id==shop.id, Promotion.is_deleted==False, Promotion.to_time>datetime.now()).order_by(Promotion.to_time.desc()).all()
 
-promotion_fields = {
-    'id': fields.Integer,
-    'name': fields.String,
-    'type': fields.Integer,
-    'binding': fields.Boolean,
-    'paymode': fields.Integer,
-    'valuecard_allowed': fields.Boolean,
-    'payment': fields.Integer,
-    'delivery_way': fields.Integer,
-    'delivery_fee': fields.Integer,
-    'last_order_time': DateTimeField('%Y-%m-%d %H:%M'),
-    'from_time': DateTimeField('%Y-%m-%d %H:%M'),
-    'to_time': DateTimeField('%Y-%m-%d %H:%M'),
-    'publish_time': DateTimeField('%Y-%m-%d %H:%M'),
-    'note': fields.String,
+    return jsonify([p.to_json() for p in promotions])
 
-    'products': fields.List(fields.Nested(promotion_product_fields)),
-    'addresses': fields.List(fields.Nested(promotion_address_fields)),
-    'status': fields.Integer,
-    #'orders': fields.List(fields.Nested(order_fields)) # 参团数量多的话，直接影响页面加载速度
-}
 
-class PromotionResource(BaseResource):
-#class PromotionResource(Resource):
-    @marshal_with(promotion_fields)
+@api.route('/promotion/products', methods=['GET'])
+@login_required
+def promotion_products():
+    shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
+    promotions = PromotionProduct.query.filter(PromotionProduct.shoppoint_id==shop.id, PromotionProduct.is_deleted==False,
+                                                  ).order_by(Promotion.to_time.desc()).limit(limit).all()
+    #else:
+    #    promotions = Promotion.query.filter(Promotion.shoppoint_id==shop.id, Promotion.is_deleted==False, Promotion.to_time>datetime.now()).order_by(Promotion.to_time.desc()).all()
+
+    return jsonify([p.to_json() for p in promotions])
+
+@api.route('/promotion/orders', methods=['GET'])
+@login_required
+def promotion_orders():
+    shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
+    orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.promotion_id==request.args.get('id'), Order.index>0).order_by(Order.index.desc()).all()
+
+    return jsonify([o.to_json() for o in orders])
+
+
+class PromotionView(UserView):
+    methods = ['GET', 'POST', 'DELETE', 'PUT']
+
     def get(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('id', type=int, required=True, location='args', help='promotion id should be required')
-        # parser.add_argument('date', type=lambda x: datetime.strptime(x,'%Y-%m-%dT%H:%M:%S'))
-        args = parser.parse_args()
-        print('GET request args: %s', args)
-        if not args['id']:
-            print('no promotion id argument in request')
-            abort(400, status=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'promotion id')
+        if 'id' not in request.args:
+            abort(make_response(jsonify(errcode=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'promotion id'), 400))
 
-        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
-        promotion = Promotion.query.get(args['id'])
+        shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
+        promotion = Promotion.query.get(request.args.get('id'))
         if promotion and promotion.shoppoint_id == shop.id and not promotion.is_deleted:
-            return promotion
+            return jsonify(promotion.to_json())
         else:
             print(MESSAGES[STATUS_NO_RESOURCE])
-            abort(404, status=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE])
+            abort(make_response(jsonify(errcode=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE]), 404))
 
-    @marshal_with(promotion_fields)
     def post(self):
-        is_new_promotion = False
-        #request.get_json(force=True)
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        #parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
-        #parser.add_argument('X-VERSION', type=str, location='headers')
-        parser.add_argument('id', type=int)
-        #parser.add_argument('name', type=str)
-        #parser.add_argument('binding', type=bool)
-        #parser.add_argument('valuecard_allowed', type=bool)
-        #parser.add_argument('paymode', type=int)
-        #parser.add_argument('payment', type=int)
-        #parser.add_argument('delivery_fee', type=int)
-        #parser.add_argument('delivery_way', type=int)
-        #parser.add_argument('last_order_date', type=str, required=True, help='last order date should be required')
-        #parser.add_argument('last_order_time', type=str, required=True, help='last order time should be required')
-        parser.add_argument('promote_type', type=int, required=True, help='promote type should be required')
-        parser.add_argument('from_date', type=str, required=True, help='from date should be required')
-        parser.add_argument('from_time', type=str, required=True, help='from time should be required')
-        parser.add_argument('to_date', type=str, required=True, help='end date should be required')
-        parser.add_argument('to_time', type=str, required=True, help='end time should be required')
-        #parser.add_argument('to_pre_sale', type=str, required=True, help='pre sale flag should be required')
-        #parser.add_argument('publish', type=int) # 发布标志
-        #parser.add_argument('publish_date', type=str)
-        #parser.add_argument('publish_time', type=str)
-        parser.add_argument('note', type=str)
-        parser.add_argument('products', type=dict, action='append', required=True, help='product information should be required')
-        parser.add_argument('to_remove', type=dict, action='append')
-        #parser.add_argument('addresses', type=int, action='append', required=True, help='pickup address information should be required')
+        shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
 
-        data = parser.parse_args()
-
-        print('promotion post data: %s', data)
-        shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
-
-        if data['id']:
-            promotion = Promotion.query.get(data['id'])
+        if request.json.get('id'):
+            promotion = Promotion.query.get(request.json.get('id'))
             if not promotion:
-                is_new_promotion = True
                 promotion = Promotion()
                 db.session.add(promotion)
         else:
-            is_new_promotion = True
             promotion = Promotion()
             db.session.add(promotion)
 
-        #promotion.name = data['name']
-        #promotion.binding = data['binding']
-        #promotion.paymode = data['paymode']
-        #promotion.payment = data['payment']
-        #promotion.valuecard_allowed = data['valuecard_allowed']
-        #promotion.delivery_way = data['delivery_way']
-        #promotion.delivery_fee = 0 if promotion.delivery_way == 1 else data['delivery_fee']
-        #promotion.last_order_time = datetime.strptime(' '.join([data['last_order_date'], data['last_order_time']]), '%Y-%m-%d %H:%M')
-        promotion.type = data['promote_type']
-        promotion.from_time = datetime.strptime(' '.join([data['from_date'], data['from_time']]), '%Y-%m-%d %H:%M')
-        promotion.to_time = datetime.strptime(' '.join([data['to_date'], data['to_time']]), '%Y-%m-%d %H:%M')
+        #promotion.name = request.json.get('name')
+        #promotion.binding = request.json.get('binding')
+        #promotion.paymode = request.json.get('paymode')
+        #promotion.payment = request.json.get('payment')
+        #promotion.valuecard_allowed = request.json.get('valuecard_allowed')
+        #promotion.delivery_way = request.json.get('delivery_way')
+        #promotion.delivery_fee = 0 if promotion.delivery_way == 1 else request.json.get('delivery_fee')
+        #promotion.last_order_time = datetime.strptime(' '.join([request.json.get('last_order_date'], data['last_order_time'])), '%Y-%m-%d %H:%M')
+        promotion.type = int(request.json.get('promote_type'))
+        promotion.from_time = datetime.strptime(' '.join([request.json.get('from_date'), request.json.get('from_time')]), '%Y-%m-%d %H:%M')
+        promotion.to_time = datetime.strptime(' '.join([request.json.get('to_date'), request.json.get('to_time')]), '%Y-%m-%d %H:%M')
         promotion.shoppoint_id = shop.id
         promotion.shoppoint = shop
         promotion.is_deleted = False
-        promotion.note = data['note']
-        #if data['publish'] == 0:
+        promotion.note = request.json.get('note')
+        #if request.json.get('publish') == 0:
         #    promotion.publish_time = datetime.now()
         #else:
-        #    promotion.publish_time = datetime.strptime(' '.join([data['publish_date'], data['publish_time']]), '%Y-%m-%d %H:%M')
+        #    promotion.publish_time = datetime.strptime(' '.join([request.json.get('publish_date'], data['publish_time'])), '%Y-%m-%d %H:%M')
         if promotion.products:
             PromotionProduct.query.filter_by(promotion_id=promotion.id).update({'is_deleted': True})
         # get max index from db
         max_index = db.session.query(db.func.max(PromotionProduct.index)).filter_by(promotion_id=promotion.id).scalar()
         if max_index is None: max_index = 0
-        if data['to_remove']:
-          for p in data['to_remove']:
+        if request.json.get('to_remove'):
+          for p in request.json.get('to_remove'):
             product = Product.query.get_or_404(p['id'])
+            product.promote_type = product.promote_type & ~promotion.type
+            if promotion.type == 4: # 特价
+                product.promote_begin_time = None
+                product.promote_end_time = None
             pp = PromotionProduct.query.filter_by(promotion_id=promotion.id, product_id=product.id).first()
             if pp:
               pp.is_deleted = True
-        for index, p in enumerate(data['products']):
+        for index, p in enumerate(request.json.get('products')):
             product = Product.query.get_or_404(p['id'])
             if not product.promote_type:
-                product.promote_type = data['promote_type']
+                product.promote_type = request.json.get('promote_type')
             else:
-                product.promote_type |= data['promote_type']
-            product.promote_begin_time = datetime.strptime(' '.join([data['from_date'], data['from_time']]), '%Y-%m-%d %H:%M')
-            product.promote_end_time = datetime.strptime(' '.join([data['to_date'], data['to_time']]), '%Y-%m-%d %H:%M')
+                product.promote_type |= request.json.get('promote_type')
+            product.promote_begin_time = datetime.strptime(' '.join([request.json.get('from_date'), request.json.get('from_time')]), '%Y-%m-%d %H:%M')
+            product.promote_end_time = datetime.strptime(' '.join([request.json.get('to_date'), request.json.get('to_time')]), '%Y-%m-%d %H:%M')
             if product.category and product.category.extra_info and product.category.extra_info & 1 == 1:
                 size = Size.query.get_or_404(p['size'])
                 pp = PromotionProduct.query.filter_by(promotion_id=promotion.id, product_id=product.id, size_id=size.id).first()
@@ -204,7 +160,7 @@ class PromotionResource(BaseResource):
 
         #promotion.addresses = []
         #to_delete_addresses = [pa.address_id for pa in promotion.addresses]
-        #for aid in data['addresses']:
+        #for aid in request.json.get('addresses'):
         #    addr = PickupAddress.query.get_or_404(aid)
         #    pa = PromotionAddress.query.get((promotion.id, addr.id))
         #    if not pa:
@@ -224,43 +180,28 @@ class PromotionResource(BaseResource):
 
         db.session.commit()
 
-        return promotion, 201
+        return jsonify(promotion.to_json()), 201
 
-    @marshal_with(promotion_fields)
     def delete(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('id', type=int, required=True, help='promotion id should be required')
-        # parser.add_argument('date', type=lambda x: datetime.strptime(x,'%Y-%m-%dT%H:%M:%S'))
-        args = parser.parse_args()
-        print('GET request args: %s', args)
-        if not args['id']:
-            print('no promotion id argument in request')
-            abort(400, status=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'promotion id')
+        if 'id' not in request.args:
+            abort(make_response(jsonify(errcode=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'promotion id'), 400))
 
-        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
-        promotion = Promotion.query.get(args['id'])
+        shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
+        promotion = Promotion.query.get(request.args.get('id'))
         if promotion and promotion.shoppoint_id == shop.id:
             promotion.is_deleted = True
-            return {}, 201
+            return jsonify({}), 201
         else:
             print(MESSAGES[STATUS_NO_RESOURCE])
-            abort(404, status=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE])
+            abort(make_response(jsonify(errcode=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE]), 404))
 
     # TODO used for sending emails
     def put(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('id', type=int, required=True, help='promotion id should be required')
-        # parser.add_argument('date', type=lambda x: datetime.strptime(x,'%Y-%m-%dT%H:%M:%S'))
-        args = parser.parse_args()
-        print('GET request args: %s', args)
-
-        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
-        promotion = Promotion.query.get(args['id'])
+        shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
+        promotion = Promotion.query.get(request.json.get('id'))
         if not promotion or promotion.shoppoint_id != shop.id:
             print(MESSAGES[STATUS_NO_RESOURCE])
-            abort(404, status=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE])
+            abort(make_response(jsonify(errcode=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE]), 404))
 
         orders = Order.query.filter(Order.promotion_id==promotion.id, Order.index>0).order_by(Order.index).all()
 
@@ -272,38 +213,4 @@ class PromotionResource(BaseResource):
 
         return jsonify({})
 
-
-class PromotionsResource(BaseResource):
-    @marshal_with(promotion_fields)
-    def get(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('manage', type=bool, location='args')
-        parser.add_argument('limit', type=int, location='args')
-        # parser.add_argument('date', type=lambda x: datetime.strptime(x,'%Y-%m-%dT%H:%M:%S'))
-        args = parser.parse_args()
-        print('GET request args: %s', args)
-        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
-        if not args['limit']:
-            args['limit'] = 10
-        if args['manage']:
-            promotions = Promotion.query.filter_by(shoppoint_id=shop.id, is_deleted=False).order_by(Promotion.to_time.desc()).limit(args['limit']).all()
-        else:
-            promotions = Promotion.query.filter(Promotion.shoppoint_id==shop.id, Promotion.is_deleted==False, Promotion.to_time>datetime.now()).order_by(Promotion.to_time.desc()).all()
-
-        return promotions
-
-class PromotionOrdersResource(BaseResource):
-    @marshal_with(order_fields)
-    def get(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('id', type=int, location='args', required=True, help='promotion id should be required')
-        # parser.add_argument('date', type=lambda x: datetime.strptime(x,'%Y-%m-%dT%H:%M:%S'))
-        args = parser.parse_args()
-        print('GET request args: %s', args)
-
-        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
-        orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.promotion_id==args['id'], Order.index>0).order_by(Order.index.desc()).all()
-
-        return orders
+api.add_url_rule('/promotion', view_func=PromotionView.as_view('promotion'))

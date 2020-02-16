@@ -1,107 +1,69 @@
 from datetime import datetime
 
-from flask import request
+from flask import request, jsonify
+from flask.views import View
 
-from flask_restful import abort
-from flask_restful import fields, marshal_with
-from flask_restful.reqparse import RequestParser
+from . import api
+from .base import UserView, login_required
 
 from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, MESSAGES
 
 from ..models import db
 from ..models import Shoppoint, PickupAddress
 
-from .base import BaseResource
+@api.route('/pickupaddresses', methods=['GET'])
+@login_required
+def pickup_addresses():
+    shop = Shoppoint.query.filter_by(code=request.headers['X-SHOPPOINT']).first_or_404()
+    if 'manage' in request.args:
+        addresses = PickupAddress.query.filter(PickupAddress.shoppoint_id==shop.id).all()
+    else:
+        addresses = PickupAddress.query.filter(PickupAddress.shoppoint_id==shop.id, 
+                                           PickupAddress.status.op('&')(1)==1).all()
 
-address_fields = {
-    'id': fields.Integer,
-    'contact': fields.String,
-    'phone': fields.String,
-    'province': fields.String,
-    'city': fields.String,
-    'district': fields.String,
-    'address': fields.String,
-    'checked': fields.Boolean,
-    'day': fields.Integer,
-    'weekday': fields.Integer,
-    'from_time': fields.String,
-    'to_time': fields.String,
-}
+    return jsonify([a.to_json() for a in addresses])
 
-class AddressResource(BaseResource):
-    @marshal_with(address_fields)
+
+class PickupAddressView(UserView):
+    methods = ['GET', 'POST', 'DELETE']
+
     def get(self):
-        parser = RequestParser()
-        parser.add_argument('code', type=int, location='args', help='pickup address code should be required')
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        args = parser.parse_args()
-        print('GET request args: %s', args)
-        if not args['code']:
-            print('no code argument in request')
-            abort(400, status=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'pickup address code')
-        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
-        address = PickupAddress.query.get(args['code'])
+        if 'code' not in request.args:
+            abort(make_response(jsonify(errcode=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'product code'), 400))
+
+        shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
+        address = PickupAddress.query.get(request.args['code'])
         if not address or address.shoppoint_id != shop.id:
-            print(MESSAGES[STATUS_NO_RESOURCE])
-            abort(404, status=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE])
+            abort(make_response(jsonify(errcode=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE]), 404))
 
-        return address
+        return jsonify(address.to_json())
 
-    @marshal_with(address_fields)
     def post(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('code', type=int)
-        parser.add_argument('contact', type=str)
-        parser.add_argument('phone', type=str)
-        parser.add_argument('province', type=str, required=True, help='province must be required')
-        parser.add_argument('city', type=str, required=True, help='city must be required')
-        parser.add_argument('district', type=str, required=True, help='district must be required')
-        parser.add_argument('address', type=str, required=True, help='address must be required')
-        parser.add_argument('checked', type=bool)
-        parser.add_argument('day', type=int)
-        parser.add_argument('weekday', type=int)
-        parser.add_argument('from_time', type=str)
-        parser.add_argument('to_time', type=str)
-        data = parser.parse_args()
-        print('POST request args: %s', data)
-
-        shop = Shoppoint.query.filter_by(code=dat['X-SHOPPOINT']).first_or_404()
+        shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
 
         address = None
-        if data['code']:
-            address = PickupAddress.query.get(data['code'])
+        if 'code' in request.json:
+            address = PickupAddress.query.get(request.json['code'])
         if not address:
             address = PickupAddress()
             db.session.add(address)
 
-        address.contact = data['contact']
-        address.phone = data['phone']
-        address.address = data['address']
-        address.checked = data['checked']
-        address.day = data['day']
-        address.weekday = data['weekday']
-        address.from_time = data['from_time']
-        address.to_time = data['to_time']
-        address.shoppoint = shop
+        print('dddddd', request.json)
+        address.contact = request.json.get('contact')
+        address.phone = request.json.get('phone')
+        address.province = request.json.get('province')
+        address.city = request.json.get('city')
+        address.district = request.json.get('district')
+        address.address = request.json.get('address')
+        address.day = request.json.get('day')
+        address.weekday = request.json.get('weekday')
+        address.from_time = request.json.get('from_time')
+        address.to_time = request.json.get('to_time')
+        address.status = request.json.get('status')
+        address.shoppoint_id = shop.id
 
         db.session.commit()
 
-        return address, 201
+        return jsonify(address.to_json()), 201
 
-
-class AddressesResource(BaseResource):
-    @marshal_with(address_fields)
-    def get(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        #parser.add_argument('code', type=int, help='pickup address code should be required')
-        args = parser.parse_args()
-        #print('GET request args: %s', args)
-        #if not args['code']:
-        #    print('no code argument in request')
-        #    abort(400, status=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'pickup address code')
-        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
-        addresses = PickupAddress.query.filter_by(shoppoint_id=shop.id, status=1).all()
-
-        return addresses
+api.add_url_rule('/pickupaddress', view_func=PickupAddressView.as_view('pickupaddress'))

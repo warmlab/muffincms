@@ -1,76 +1,31 @@
-from flask import request, current_app, json
+from flask import request, current_app, json, jsonify
 
-from flask_restful import Resource
-from flask_restful import fields, marshal_with, abort
-from flask_restful.reqparse import RequestParser
+from . import api
+from .base import UserView
 
 from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, MESSAGES
 
 from ..models import db
 from ..models import Shoppoint, Partment
 
-from .base import BaseResource
 
-shoppoint_fields = {
-    'name': fields.String,
-    'code': fields.String,
-    'english_name': fields.String,
-    'contact': fields.String,
-    'phone': fields.String,
-    'mobile': fields.String,
-    'address': fields.String,
-    'banner': fields.String,
-    'note': fields.String,
-}
+class ShoppointView(UserView):
+  def get(self):
+    shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
 
-partment_fields = {
-    'name': fields.String,
-    'code': fields.String,
-    'shop': fields.Nested(shoppoint_fields)
-}
+    return jsonify(shop.to_json())
 
-class ShoppointResource(BaseResource):
-    @marshal_with(shoppoint_fields)
-    def get(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        #parser.add_argument('X-PARTMENT', type=str, required=True, location='headers', help='partment code must be required')
-        args = parser.parse_args()
-
-        #if not args['X-PARTMENT']:
-        #    print('no shoppoint partment argument in request')
-        #    abort(400, status=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'partment code')
-
-        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
-
-        return shop
-
-    @marshal_with(shoppoint_fields)
-    def post(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        #parser.add_argument('X-PARTMENT', type=str, required=True, location='headers', help='partment code must be required')
-        parser.add_argument('name', type=str, required=True, help='partment code must be required')
-        parser.add_argument('contact', type=str, required=True, help='partment code must be required')
-        parser.add_argument('mobile', type=str, required=True, help='partment code must be required')
-        parser.add_argument('address', type=str, required=True, help='partment code must be required')
-        parser.add_argument('note', type=str)
-        args = parser.parse_args()
-
-        print('shopinfo commit info', args)
-
-        #if not args['X-PARTMENT']:
-        #    print('no shoppoint partment argument in request')
-        #    abort(400, status=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'partment code')
-
-        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
-        shop.name = args['name']
-        shop.contact = args['contact']
-        shop.mobile = args['mobile']
-        shop.address = args['address']
-        shop.note = args['note']
+  def post(self):
+    shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
+    if request.method == 'POST':
+        shop.name = request.json.get('name')
+        shop.contact = request.json.get('contact')
+        shop.mobile = request.json.get('mobile')
+        shop.address = request.json.get('address')
+        shop.note = request.json.get('note')
 
         db.session.commit()
-        #partment = Partment.query.filter_by(shoppoint_id=shop.id, code=args['X-PARTMENT']).first_or_404()
 
-        return shop
+    return jsonify(shop.to_json())
+
+api.add_url_rule('/shopinfo', view_func=ShoppointView.as_view('shopinfo'))

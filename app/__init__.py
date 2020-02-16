@@ -26,9 +26,8 @@ def create_app(config_name):
         from flask_sslify import SSLify
         sslify = SSLify(app)
 
-    from .api import api_blueprint
+    from .api import api as api_blueprint
     app.register_blueprint(api_blueprint, url_prefix='/api')
-    #app.register_blueprint(api_blueprint, url_prefix='/api')
 
     from .payment import payment as payment_blueprint
     app.register_blueprint(payment_blueprint, url_prefix='/pay/<string:shopcode>/<string:partcode>')

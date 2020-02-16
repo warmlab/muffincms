@@ -6,281 +6,178 @@ from urllib.parse import urlencode
 from urllib.request import urlopen
 from urllib.request import Request as UrlRequest
 
-from flask import request, current_app, json
-
-from flask_restful import Resource
-from flask_restful import fields, marshal_with, abort
-from flask_restful.reqparse import RequestParser
+from flask import request, current_app, json, jsonify, abort, make_response
 
 from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, STATUS_CANNOT_DECRYPT, STATUS_TOKEN_INVALID, MESSAGES
 
 from ..models import db
 from ..models import MemberOpenid, Shoppoint, Partment, MemberOpenidAddress
 
-from .base import BaseResource
+from . import api
+from .base import UserView, login_required
 
-address_fields = {
-    'id': fields.Integer,
-    'contact': fields.String,
-    'phone': fields.String,
-    'province': fields.String,
-    'city': fields.String,
-    'district': fields.String,
-    'address': fields.String,
-    #'longitude': fields.String,
-    #'latitude': fields.String,
-    'is_default': fields.Boolean
-}
 
-openid_fields = {
-    'openid': fields.String,
-    'nickname': fields.String,
-    'avatarUrl': fields.String,
-    'name': fields.String,
-    'phone': fields.String,
-    'access_token': fields.String,
-    'privilege': fields.Integer,
-    #'addresses': fields.List(fields.Nested(address_fields))
-}
+@api.route('/login', methods=['POST'])
+def login():
+    shop = Shoppoint.query.filter_by(code=request.headers['X-SHOPPOINT']).first_or_404()
+    if 'code' not in request.json:
+        print('no code or partment argument in request')
+        abort(make_response(jsonify(errcode=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'member login code or partment code'), 400))
 
-class LoginResource(Resource):
-    @marshal_with(openid_fields)
-    def post(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('X-PARTMENT', type=str, required=True, location='headers', help='partment code must be required')
-        parser.add_argument('code', type=str, required=True, help='member login code must be required')
-        #parser.add_argument('session_key', type=str, help='member session_key must be required')
-        args = parser.parse_args()
+    partment = Partment.query.filter_by(shoppoint_id=shop.id, code=request.headers.get('X-PARTMENT')).first_or_404()
 
-        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
-        if not args['code'] or not args['X-PARTMENT']:
-            print('no code or partment argument in request')
-            abort(400, status=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'member login code or partment code')
+    data = (
+        ('appid', partment.appid),
+        ('secret', partment.appsecret),
+        ('js_code', request.json.get('code')),
+        ('grant_type', 'authorization_code')
+    )
 
-        print('partment: ', args['X-PARTMENT'])
-        partment = Partment.query.filter_by(shoppoint_id=shop.id, code=args['X-PARTMENT']).first_or_404()
+    print('request weixin data: ', data)
+    r = UrlRequest('https://api.weixin.qq.com/sns/jscode2session?'+urlencode(data), method='GET')
+    with urlopen(r) as s:
+        result = s.read().decode('utf-8')
+        info = json.loads(result)
+        print('result from weixin jscode2session: ', info)
+        if 'errcode' in info:
+            print('request weixin jscode2session failed: ', info)
+            abort(make_response(jsonify(errcode=info['errcode'], message=info['errmsg']), 400))
 
-        data = (
-            ('appid', partment.appid),
-            ('secret', partment.appsecret),
-            ('js_code', args['code']),
-            ('grant_type', 'authorization_code')
-        )
-
-        print('request weixin data: ', data)
-        r = UrlRequest('https://api.weixin.qq.com/sns/jscode2session?'+urlencode(data), method='GET')
-        with urlopen(r) as s:
-            result = s.read().decode('utf-8')
-            info = json.loads(result)
-            print('result from weixin jscode2session: ', info)
-            if 'errcode' in info:
-                print('request weixin jscode2session failed: ', info)
-                abort(400, status=info['errcode'], message=info['errmsg'])
-
-            mo = MemberOpenid.query.filter_by(openid=info['openid']).first()
-            if not mo:
-                mo = MemberOpenid()
-                mo.openid = info['openid']
-
-            mo.session_key = info['session_key']
-            mo.expires_time = int(time()) + 86400
-            mo.shoppoint_id = shop.id
-
-            mo.generate_access_token(partment.secret_key)
-
-            if 'unionid' in info and not mo.unionid:
-                mo.unionid = info['unionid']
-                m = Member.query.filter_by(unionid=mo.unionid).first()
-                if m:
-                    mo.member = m
-                else:
-                    m = Member()
-                    m.unionid = info['unionid']
-                    db.session.add(m)
+        mo = MemberOpenid.query.filter_by(openid=info['openid']).first()
+        if not mo:
+            mo = MemberOpenid()
+            mo.openid = info['openid']
             db.session.add(mo)
-            db.session.commit()
 
-            return mo
+        mo.session_key = info['session_key']
+        mo.expires_time = int(time()) + 86400
+        mo.shoppoint_id = shop.id
 
-        abort(405, status=STATUS_CANNOT_LOGIN, message=MESSAGES[STATUS_CANNOT_LOGIN] % args['code'])
+        mo.generate_access_token(partment.secret_key)
+
+        if 'unionid' in info and not mo.unionid:
+            mo.unionid = info['unionid']
+            m = Member.query.filter_by(unionid=mo.unionid).first()
+            if m:
+                mo.member = m
+            else:
+                m = Member()
+                m.unionid = info['unionid']
+                db.session.add(m)
+        dic = mo.to_json()
+        db.session.commit()
+        print('member openid', dic)
+
+        return jsonify(dic)
+
+    abort(make_response(jsonify(errcode=STATUS_CANNOT_LOGIN, message=MESSAGES[STATUS_CANNOT_LOGIN] % args['code']), 405))
 
 
-class TokenCheckerResource(BaseResource):
-    @marshal_with(openid_fields)
-    def post(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
-        parser.add_argument('X-PARTMENT', type=str, location='headers', required=True, help='partment code must be required')
-        data = parser.parse_args()
+@api.route('/tokencheck', methods=['POST'])
+def token_check():
+    shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
+    partment = Partment.query.filter_by(shoppoint_id=shop.id, code=request.headers.get('X-PARTMENT')).first_or_404()
+    mo = MemberOpenid.query.filter_by(shoppoint_id=shop.id, access_token=request.headers.get('X-ACCESS-TOKEN')).first()
+    if not mo or not mo.verify_access_token(partment.secret_key):
+        abort(make_response(jsonify(errcode=STATUS_TOKEN_INVALID, message=MESSAGES[STATUS_TOKEN_INVALID]), 403))
 
-        shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
-        partment = Partment.query.filter_by(shoppoint_id=shop.id, code=data['X-PARTMENT']).first_or_404()
-        mo = MemberOpenid.query.filter_by(shoppoint_id=shop.id, access_token=data['X-ACCESS-TOKEN']).first()
-        if not mo or not mo.verify_access_token(partment.secret_key):
-            abort(403, status=STATUS_TOKEN_INVALID, message=MESSAGES[STATUS_TOKEN_INVALID])
+    return jsonify(mo.to_json())
 
-        return mo
+@api.route('/openid/decrypt', methods=['POST'])
+@login_required
+def descrypt():
+    shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
+    partment = Partment.query.filter_by(shoppoint_id=shop.id, code=request.headers.get('X-PARTMENT')).first_or_404()
+    mo = MemberOpenid.query.filter_by(shoppoint_id=shop.id, access_token=request.headers.get('X-ACCESS-TOKEN')).first()
+    if not mo or not mo.verify_access_token(partment.secret_key):
+        abort(make_response(jsonify(errcode=STATUS_TOKEN_INVALID, message=MESSAGES[STATUS_TOKEN_INVALID]), 403))
 
-class DecryptResource(BaseResource):
-    def post(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
-        parser.add_argument('X-PARTMENT', type=str, location='headers', required=True, help='partment code must be required')
-        parser.add_argument('encryptedData', type=str, required=True, help='encrypted data must be required')
-        parser.add_argument('iv', type=str, required=True, help='iv must be required')
-        parser.add_argument('errMsg', type=str)
-        data = parser.parse_args()
+    # decrypt procedure
+    # base64 decode
+    sessionKey = base64.b64decode(mo.session_key)
+    encryptedData = base64.b64decode(request.headers.get('encryptedData'))
+    iv = base64.b64decode(request.headers.get('iv'))
 
-        shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
-        partment = Partment.query.filter_by(shoppoint_id=shop.id, code=data['X-PARTMENT']).first_or_404()
-        mo = MemberOpenid.query.filter_by(shoppoint_id=shop.id, access_token=data['X-ACCESS-TOKEN']).first()
-        if not mo or not mo.verify_access_token(partment.secret_key):
-            abort(403, status=STATUS_TOKEN_INVALID, message=MESSAGES[STATUS_TOKEN_INVALID])
+    cipher = AES.new(sessionKey, AES.MODE_CBC, iv)
 
-        # decrypt procedure
-        # base64 decode
-        sessionKey = base64.b64decode(mo.session_key)
-        encryptedData = base64.b64decode(data['encryptedData'])
-        iv = base64.b64decode(data['iv'])
+    s = cipher.decrypt(encryptedData)
+    s = s[:(-s[-1])]
+    decrypted = json.loads(s)
 
-        cipher = AES.new(sessionKey, AES.MODE_CBC, iv)
+    print('decrypted after: %s', decrypted)
 
-        s = cipher.decrypt(encryptedData)
-        s = s[:(-s[-1])]
-        decrypted = json.loads(s)
+    if decrypted['watermark']['appid'] != partment.appid:
+        abort(400, STATUS_CANNOT_DECRYPT, MESSAGES[STATUS_CANNOT_DECRYPT])
 
-        print('decrypted after: %s', decrypted)
+    return decrypted
 
-        if decrypted['watermark']['appid'] != partment.appid:
-            abort(400, STATUS_CANNOT_DECRYPT, MESSAGES[STATUS_CANNOT_DECRYPT])
+@api.route('/openid/addresses', methods=['GET'])
+@login_required
+def address_list():
+    shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
+    mo = MemberOpenid.query.filter_by(access_token=request.headers.get('X-ACCESS-TOKEN')).first_or_404()
+    addresses = MemberOpenidAddress.query.filter_by(openid=mo.openid).all()
 
-        return decrypted
+    return jsonify([a.to_json() for a in addresses])
 
-class OpenidResource(BaseResource):
-    @marshal_with(openid_fields)
+class OpenidView(UserView):
     def get(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('X-ACCESS-TOKEN', type=str, required=True, location='headers', help='access token must be required')
-        args = parser.parse_args()
-        print('GET request args: %s', args)
+        shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
+        mo = MemberOpenid.query.filter_by(shoppoint_id=shop.id, access_token=request.headers.get('X-ACCESS-TOKEN')).first_or_404()
 
-        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
-        mo = MemberOpenid.query.filter_by(shoppoint_id=shop.id, access_token=args['X-ACCESS-TOKEN']).first_or_404()
+        return jsonify(mo.to_json())
 
-        return mo
-
-    @marshal_with(openid_fields)
     def post(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('X-ACCESS-TOKEN', type=str, required=True, location='headers', help='access token must be required')
-        parser.add_argument('name', type=str, required=True, help='member name must be required')
-        parser.add_argument('phone', type=str, required=True, help='member phone number must be required')
-        args = parser.parse_args()
-        print('GET request args: %s', args)
+        shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
+        mo = MemberOpenid.query.filter_by(shoppoint_id=shop.id, access_token=request.headers.get('X-ACCESS-TOKEN')).first_or_404()
 
-        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
-        mo = MemberOpenid.query.filter_by(shoppoint_id=shop.id, access_token=args['X-ACCESS-TOKEN']).first_or_404()
+        mo.name = request.json.get('name')
+        mo.phone = request.json.get('phone')
 
-        mo.name = args['name']
-        mo.phone = args['phone']
-
-        return mo, 201
+        return jsonify(mo.to_json()), 201
 
 
-class OpenidAddressResource(BaseResource):
-    @marshal_with(address_fields)
+class OpenidAddressView(UserView):
+    methods = ['GET', 'POST', 'DELETE']
     def get(self):
-        parser = RequestParser()
-        #parser.add_argument('openid', type=str, required=True, location='args', help='openid should be required')
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
-        parser.add_argument('id', type=int, required=True, location='args', help='address id should be required')
-        # parser.add_argument('date', type=lambda x: datetime.strptime(x,'%Y-%m-%dT%H:%M:%S'))
-        args = parser.parse_args()
-        print('GET request args: %s', args)
-
-        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
-        mo = MemberOpenid.query.filter_by(shoppoint_id=shop.id, access_token=args['X-ACCESS-TOKEN']).first_or_404()
-        address = MemberOpenidAddress.query.get_or_404(args['id'])
+        shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
+        mo = MemberOpenid.query.filter_by(shoppoint_id=shop.id, access_token=request.headers.get('X-ACCESS-TOKEN')).first_or_404()
+        address = MemberOpenidAddress.query.get_or_404(request.args.get('id'))
         if address.openid != mo.openid:
-            abort(404, status=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE])
-        return address
+            abort(make_response(jsonify(errcode=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE]), 404))
+        return jsonify(address.to_json())
 
-    @marshal_with(address_fields)
     def post(self):
-        parser = RequestParser()
-        #parser.add_argument('openid', type=str, required=True, help='openid should be required')
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
-        parser.add_argument('id', type=int)
-        parser.add_argument('openid', type=str)
-        parser.add_argument('contact', type=str, required=True, help='contact name should be required')
-        parser.add_argument('phone', type=str, required=True, help='phone should be required')
-        parser.add_argument('province', type=str, required=True, help='phone should be required')
-        parser.add_argument('city', type=str, required=True, help='phone should be required')
-        parser.add_argument('district', type=str, required=True, help='phone should be required')
-        parser.add_argument('address', type=str, required=True, help='address should be required')
-        parser.add_argument('is_default', type=bool, required=True, help='default setting should be required')
-        # parser.add_argument('date', type=lambda x: datetime.strptime(x,'%Y-%m-%dT%H:%M:%S'))
-        data = parser.parse_args()
-        print('GET request args: %s', data)
+        shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
+        mo = MemberOpenid.query.filter_by(shoppoint_id=shop.id, access_token=request.headers.get('X-ACCESS-TOKEN')).first_or_404()
 
-        shop = Shoppoint.query.filter_by(code=data['X-SHOPPOINT']).first_or_404()
-        mo = MemberOpenid.query.filter_by(shoppoint_id=shop.id, access_token=data['X-ACCESS-TOKEN']).first_or_404()
-
-        if data['id']:
-            address = MemberOpenidAddress.query.get_or_404(data['id'])
+        if request.json.get('id'):
+            address = MemberOpenidAddress.query.get_or_404(request.json.get('id'))
         else:
             address = MemberOpenidAddress()
-        address.contact = data['contact']
-        address.phone = data['phone']
-        address.province = data['province']
-        address.city = data['city']
-        address.district = data['district']
-        address.address = data['address'].strip()
+        address.contact = request.json.get('contact')
+        address.phone = request.json.get('phone')
+        address.province = request.json.get('province')
+        address.city = request.json.get('city')
+        address.district = request.json.get('district')
+        address.address = request.json.get('address').strip()
         address.openid = mo.openid
-        if data['is_default']:
+        if request.json.get('is_default'):
             MemberOpenidAddress.query.filter_by(openid=mo.openid).update({'is_default': False})
 
-        address.is_default = data['is_default']
+        address.is_default = request.json.get('is_default')
         db.session.add(address)
         db.session.commit()
 
-        return address, 201
+        return jsonify(address.to_json()), 201
 
     def delete(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        #parser.add_argument('openid', type=str, required=True, help='openid should be required')
-        parser.add_argument('id', type=int, required=True, help='address id should be required')
-        # parser.add_argument('date', type=lambda x: datetime.strptime(x,'%Y-%m-%dT%H:%M:%S'))
-        args = parser.parse_args()
-        print('GET request args: %s', args)
-
-        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
-        address = MemberOpenidAddress.query.get_or_404(args['id'])
+        shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
+        address = MemberOpenidAddress.query.get_or_404(request.json.get('id'))
         db.session.delete(address)
         db.session.commit()
-        return {}, 201
 
-class OpenidAddressesResource(BaseResource):
-    @marshal_with(address_fields)
-    def get(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('X-ACCESS-TOKEN', type=str, location='headers', required=True, help='access token must be required')
-        parser.add_argument('openid', type=str, location='args')
-        # parser.add_argument('date', type=lambda x: datetime.strptime(x,'%Y-%m-%dT%H:%M:%S'))
-        args = parser.parse_args()
-        print('query member address request args:', args)
+        return jsonify({})
 
-        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
-        mo = MemberOpenid.query.filter_by(access_token=args['X-ACCESS-TOKEN']).first_or_404()
-        addresses = MemberOpenidAddress.query.filter_by(openid=mo.openid).all()
-
-        return addresses
+api.add_url_rule('/openid', view_func=OpenidView.as_view('openid'))
+api.add_url_rule('/openid/address', view_func=OpenidAddressView.as_view('openid_address'))

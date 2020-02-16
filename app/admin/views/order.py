@@ -28,7 +28,7 @@ def order_list(shopcode):
       #promotion = Promotion.query.get_or_404(id)
 
   now = datetime.now()+timedelta(days=-2)
-  orders = Order.query.filter(Order.shoppoint_id==shop.id)#, Order.pay_time>now)
+  orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.pay_time>now)
   dic = {}
   for o in orders:
       for p in o.products:

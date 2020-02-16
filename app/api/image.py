@@ -3,11 +3,7 @@ import os, hashlib
 from time import time
 from datetime import datetime
 
-from flask import current_app, request
-
-from flask_restful import abort
-from flask_restful import fields, marshal_with
-from flask_restful.reqparse import RequestParser
+from flask import current_app, request, jsonify, abort, make_response
 
 from werkzeug.datastructures import FileStorage
 
@@ -18,105 +14,101 @@ from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, MESSAGES
 from ..models import db
 from ..models import Shoppoint, Image
 
-from .base import BaseResource
+from . import api
+from .base import UserView, login_required
 
-image_fields = {
-    'id': fields.Integer,
-    'name': fields.String,
-    'type': fields.Integer,
-    #'hash_value': fields.String,
-    'title': fields.String,
-    'note': fields.String
-}
 
-def generate_filename(filename):
-    pos = filename.rfind('.')
-    if pos > 0:
-        ext = filename[pos+1:]
-        return '.'.join([str(time()), ext])
-    else:
-        return str(time())
+@api.route('/images', methods=['GET'])
+@login_required
+def images():
+    shop = Shoppoint.query.filter_by(code=request.headers['X-SHOPPOINT']).first_or_404()
+    images = Image.query.filter(Image.type.op('&')(int(request.args.get('type')))>0, Image.shoppoint_id==shop.id).all()
 
-def generate_hash_value(file_storage):
-    md5 = hashlib.md5()
-    md5.update(file_storage.read())
-    file_storage.seek(0)
+    return jsonify([i.to_json() for i in images])
 
-    return md5.hexdigest()
 
-class ImageResource(BaseResource):
-    @marshal_with(image_fields)
+class ImageView(UserView):
+    methods = ['GET', 'POST', 'DELETE']
+    def generate_filename(self, filename):
+        pos = filename.rfind('.')
+        if pos > 0:
+            ext = filename[pos+1:]
+            return '.'.join([str(time()), ext])
+        else:
+            return str(time())
+
+    def generate_hash_value(self, file_storage):
+        md5 = hashlib.md5()
+        md5.update(file_storage.read())
+        file_storage.seek(0)
+
+        return md5.hexdigest()
+
     def get(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('name', type=str, required=True, help='name must be required by getting image info')
-        args = parser.parse_args()
-
-        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
-        image = Image.query.filter_by(name=args['name'], shoppoint_id=shop.id).first()
+        shop = Shoppoint.query.filter_by(code=request.headers['X-SHOPPOINT']).first_or_404()
+        image = Image.query.filter_by(name=request.args.get('name'), shoppoint_id=shop.id).first()
         if not image:
-            abort(404, status=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE] % 'image info')
+            abort(make_response(jsonify(errcode=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE] % 'image info'), 404))
 
-        return image
+        return jsonify(image.to_json())
 
-    @marshal_with(image_fields)
     def post(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('upload-files', type=FileStorage, location='files', action="append", required=True, help='the upload files should be required')
-        parser.add_argument('type', type=int)
-        parser.add_argument('title', type=str)
-        parser.add_argument('note', type=str)
-        args = parser.parse_args()
+        shop = Shoppoint.query.filter_by(code=request.headers['X-SHOPPOINT']).first_or_404()
 
-        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
+        upload_file = request.files.get('upload-files')
 
-        images = []
-        upload_files = args['upload-files']
-        print('upload files: ', upload_files)
-        for upload_file in upload_files:
-            hash_value = generate_hash_value(upload_file)
-            filename = generate_filename(upload_file.filename)
-            print('upload file name: ', upload_file.filename, ' hash value ', hash_value)
+        hash_value = self.generate_hash_value(upload_file)
+        filename = self.generate_filename(upload_file.filename)
+        print('upload file name: ', upload_file.filename, ' hash value ', hash_value)
 
-            image = Image.query.filter_by(hash_value=hash_value, shoppoint_id=shop.id).first()
-            if not image:
-                print('to create an image item')
-                image = Image()
-                image.hash_value = hash_value
-                image.name = filename
-                image.title = args['title']
-                image.note = args['note']
-                image.type = args['type']
-                image.shoppoint_id = shop.id
-                image.shoppoint = shop
+        image = Image.query.filter_by(hash_value=hash_value, shoppoint_id=shop.id).first()
+        if not image:
+            print('to create an image item')
+            image = Image()
+            image.hash_value = hash_value
+            image.name = filename
+            image.type = 0 # 
+            image.shoppoint_id = shop.id
+            image.shoppoint = shop
+            db.session.add(image)
 
-                original_file = os.path.join(current_app.config['UPLOAD_FOLDER'], 'full', filename)
-                upload_file.save(original_file) # original file
+            original_file = os.path.join(current_app.config['UPLOAD_FOLDER'], 'full', filename)
+            upload_file.save(original_file) # original file
+            if int(request.values.get('type')) != 4:
                 im = PLImage.open(original_file)
                 im.thumbnail((200,200))
                 im.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename), 'JPEG')
-
-                db.session.add(image)
-                db.session.commit()
             else:
-              image.title = args['title']
-              image.note = args['note']
-              image.type = args['type']
-            images.append(image)
-        return images
+                im = PLImage.open(original_file)
+                im.thumbnail((750,330))
+                im.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename), 'JPEG')
 
-class ImagesResource(BaseResource):
-    @marshal_with(image_fields)
-    def get(self):
-        parser = RequestParser()
-        parser.add_argument('X-SHOPPOINT', type=str, location='headers', required=True, help='shoppoint code must be required')
-        parser.add_argument('type', type=str, location='args', required=True, help='type  must be required by getting image list')
-        args = parser.parse_args()
+        image.title = request.values.get('title')
+        image.note = request.values.get('note')
+        image.type = image.type | int(request.values.get('type'))
 
-        print('args', args)
+        db.session.commit()
+        return jsonify(image.to_json()), 201
 
-        shop = Shoppoint.query.filter_by(code=args['X-SHOPPOINT']).first_or_404()
-        images = Image.query.filter_by(type=args['type'], shoppoint_id=shop.id).all()
+    def delete(self):
+        shop = Shoppoint.query.filter_by(code=request.headers['X-SHOPPOINT']).first_or_404()
+        image = Image.query.filter_by(id=request.json.get('id'), shoppoint_id=shop.id).first()
+        if not image:
+            abort(make_response(jsonify(errcode=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE]), 404))
 
-        return images
+        if image.type == 4:
+            try:
+                os.unlink(os.path.join(current_app.config['UPLOAD_FOLDER'], 'full', image.name))
+                os.unlink(os.path.join(current_app.config['UPLOAD_FOLDER'], image.name))
+            except Exception as e:
+                print('remove file error', e)
+            db.session.delete(image)
+        else:
+            image.type = image.type & ~4
+
+        db.session.commit()
+
+        return jsonify(image.to_json()), 201
+
+
+api.add_url_rule('/image', view_func=ImageView.as_view('image'))
