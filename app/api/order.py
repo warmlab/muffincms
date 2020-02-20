@@ -97,7 +97,7 @@ class OrderView(UserView):
         order.openid = mo.openid
         order.payment = 14
         order.member_openid = mo
-        db.session.add(order)
+        #db.session.add(order)
 
         order.products = []
         order.code = datetime.now().strftime('%Y%m%d%%04d%H%M%S%f') % shop.id
@@ -176,7 +176,8 @@ class OrderView(UserView):
             order.products.append(op)
             db.session.add(op)
         if soldouts:
-            abort(make_response(jsonify(errcode=STATUS_SOLD_OUT, message=MESSAGES[STATUS_NO_RESOURCE], data=json.dumps(soldouts)), 406))
+            db.session.rollback()
+            abort(make_response(jsonify(errcode=STATUS_SOLD_OUT, message=MESSAGES[STATUS_SOLD_OUT], data=soldouts), 406))
 
         # address info
         if order.delivery_way == 1: # 自提模式
