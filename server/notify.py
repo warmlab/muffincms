@@ -76,35 +76,47 @@ def notify_admins(code, shoppoint_id):
 
         print('notify admin result: ', result)
 
+
 @app.task()
 def notify_customer(order_code, partment_code, shoppoint_id, form_id):
     # 获取订单信息
     order = Order.query.get_or_404(order_code)
     # 获取公众号的partment
     partment = Partment.query.filter_by(shoppoint_id=shoppoint_id, code=partment_code).first()
+    thing1 = ' '.join(['x'.join([p.product.name + ('' if not p.size else '['+p.size.name+']'), str(p.amount)]) for p in order.products])
+    if len(thing1)> 20:
+        thing1 = thing1[:17] + '...'
+
+    if order.note:
+        if len(order.note) > 20:
+            thing17 = order.note[:17] + '...'
+        else:
+            thing17 = order.note
+    else:
+        thing17 = '-'
     # 提醒顾客订单已经付款
     data = {
         "thing1":{
             #"value": ' '.join(["x".join([p.product.name, str(p.amount)]) for p in order.products])
-            "value": ' '.join(['x'.join([p.product.name + ('' if not p.size else '['+p.size.name+']'), str(p.amount)]) for p in order.products])
+            "value": thing1
             },
         "amount7":{
             "value": '￥' + str((order.cost+order.delivery_fee)/100)
             },
         "thing17":{
-            "value": order.note
+            "value": thing17
             },
         "thing9":{
-            "value": '如有疑问，可以拨打客服电话: 13370882078，服务时间：9:00~19:00'
+            "value": '纯手工现场制作，请及时取货'
             },
     }
 
     if order.delivery_way == 2:
         template_id = 'BmAwxIPTXz1p5ymj3g04NxChpWWI4sbgdy1RPyXphnU'
-        data['thing8'] = order.address.name + '[' + order.address.phone + ']' + order.address.full_address()
+        data['thing8'] = {'value': order.address.name[:7] + '[' + order.address.phone + ']'}
     else:
         template_id = 'BmAwxIPTXz1p5ymj3g04NwrfuwnEl-ySpeaHrv7kxss'
-        data['thing21'] = order.pickup_address.address
+        data['thing21'] = {'value': order.pickup_address.address[:20]}
 
     j = {
         'template_id': template_id,

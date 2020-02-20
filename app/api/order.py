@@ -4,7 +4,7 @@ from urllib.parse import urlencode
 from urllib.request import urlopen
 from urllib.request import Request
 
-from flask import request, jsonify, url_for, json
+from flask import request, jsonify, url_for, json, abort, make_response
 
 from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, STATUS_SOLD_OUT, STATUS_NO_ORDER_STATUS, MESSAGES
 
@@ -183,6 +183,7 @@ class OrderView(UserView):
             addr = PickupAddress.query.get(request.json.get('pickup_address'))
             if not addr:
                 abort(make_response(jsonify(errcode=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE]), 400))
+            order.pickup_address_id = addr.id
             order.pickup_address = addr
         # user address info
         delivery_addr = MemberOpenidAddress.query.get(request.json.get('delivery_address'))
