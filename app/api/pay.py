@@ -34,6 +34,11 @@ def pay():
         }, 200 # TODO already paid formerly
 
     order.payment = request.json.get('payment')
+
+    # TODO for op in order.products:
+    #    if not (op.product.payment & 2): # not support value card payment
+    #        weixin_pay += op.price * op.amount
+
     if order.payment == 2:
         payment_info = {
             'payment': order.payment,
@@ -46,6 +51,7 @@ def pay():
             order.next_index()
             order.payment_code = order.code
             order.pay_time = datetime.now()
+            order.status = 2 # paied
             order.commit_amount()
             db.session.commit()
             notify_admins.delay(order.code, shop.id)

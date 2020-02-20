@@ -1,5 +1,4 @@
 from datetime import datetime
-from time import time
 from uuid import uuid4
 
 from flask import json, jsonify, abort
@@ -48,6 +47,7 @@ def notify(shopcode, partcode):
     order.payment_code = message.get_value('transaction_id')
     if order.cost+order.delivery_fee == int(message.get_value('cash_fee')):
         order.pay_time = datetime.strptime(message.get_value('time_end'), '%Y%m%d%H%M%S')
+        order.status = 2
         #if order.promotion:
         #    order.commit_amount()
         #    order.next_index()

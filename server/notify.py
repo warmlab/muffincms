@@ -15,6 +15,7 @@ def access_weixin_api(url, body, **kwargs):
         result = f.read().decode('utf-8')
 
         info = json.loads(result)
+        print('message sent result', info)
 
         return info
 
@@ -108,7 +109,8 @@ def notify_customer(order_code, partment_code, shoppoint_id, form_id):
     j = {
         'template_id': template_id,
         'touser': order.openid,
-        'form_id': form_id,
+        #'form_id': form_id,
+        #"miniprogram_state": "developer",
         'page': '/pages/my/order/detail?code=' + order.code,
         'data': data
         }

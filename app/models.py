@@ -394,7 +394,7 @@ class PickupAddress(BaseModel):
 
 class Order(BaseModel):
     __tablename__ = 'order'
-    _include_column_ = ['code', 'payment_code', 'index', 'cost', 'delivery_fee', 'refund', 'mode', 'payment', 'order_time', 'pay_time', 'note', 'openid', 'products', 'pickup_address', 'address']
+    _include_column_ = ['code', 'payment_code', 'index', 'cost', 'delivery_way', 'delivery_fee', 'refund', 'mode', 'payment', 'order_time', 'pay_time', 'note', 'openid', 'products', 'pickup_address', 'address', 'status']
 
     code = db.Column(db.String(32), primary_key=True, index=True) # 订单编号
     payment_code = db.Column(db.String(128), nullable=True) # 第三方支付平台订单编号
@@ -421,6 +421,7 @@ class Order(BaseModel):
     delivery_time = db.Column(db.DateTime, default=datetime.now) # 交付时间
     finished_time = db.Column(db.DateTime) # 收货时间
 
+    status = db.Column(db.Integer, default=1) # 1-待付款 2-已付款-待取货 4-已快递 8-已完成
     note = db.Column(db.Text)
 
     member_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=True) # 会员消费
@@ -575,7 +576,7 @@ class Member(BaseModel):
 
 class MemberOpenid(BaseModel):
     __tablename__ = 'member_openid'
-    _include_column_ = ['openid', 'nickname', 'avatarUrl', 'privilege', 'name', 'phone', 'access_token']
+    _include_column_ = ['openid', 'nickname', 'avatarUrl', 'privilege', 'name', 'phone', 'access_token', 'expires_time']
     openid = db.Column(db.String(64), primary_key=True) # used in weixin
     nickname = db.Column(db.String(128)) # used in weixin
     avatarUrl = db.Column(db.String(2048))

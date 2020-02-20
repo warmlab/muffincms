@@ -1,5 +1,4 @@
-from time import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import uuid4
 from urllib.parse import urlencode
 from urllib.request import urlopen
@@ -22,50 +21,36 @@ from . import api
 from .base import UserView, login_required
 
 
-#order_fields = {
-#    'code': fields.String,
-#    'index': fields.Integer,
-#    'original_cost': fields.Integer,
-#    'cost': fields.Integer,
-#    'refund': fields.Integer,
-#    'delivery_way': fields.Integer,
-#    'delivery_fee': fields.Integer,
-#    'refund_delivery_fee': fields.Integer,
-#    'mode': fields.Integer,
-#    'payment': fields.Integer,
-#    #'valuecard_allowed': fields.Boolean,
-#    'bonus_balance': fields.Integer,
-#    'prepay_id': fields.String,
-#    'order_time': DateTimeField(dt_format='%Y-%m-%d %H:%M:%S'),
-#    'pay_time': DateTimeField(dt_format='%Y-%m-%d %H:%M:%S'),
-#    'note': fields.String,
-#    'member_openid': fields.Nested(openid_fields),
-#    'promotion_id': fields.Integer,
-#    'products': fields.List(fields.Nested(order_product_fields)),
-#    'address': fields.Nested(order_address_fields),
-#    'pickup_address': fields.Nested(pickup_address_fields)
-#}
-
-#order_promotion_fields = order_fields
-#order_promotion_fields['promotion'] = fields.Nested(promotion_fields)
-
 @api.route('/orders', methods=['GET'])
 @login_required
 def orders():
     shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
     mo = MemberOpenid.query.filter_by(access_token=request.headers.get('X-ACCESS-TOKEN')).first_or_404()
 
-    status = request.args.get('status')
-    if status == 'wait':
-        orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.openid==mo.openid, Order.mode==0, Order.payment_code==None, Order.pay_time==None).order_by(Order.code.desc()).all()
-    elif status == 'paid':
-        orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.openid==mo.openid, Order.mode==0, Order.payment_code!=None, Order.pay_time!=None, Order.finished_time==None).order_by(Order.code.desc()).all()
-    elif status == 'finished':
-        orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.openid==mo.openid, Order.mode==0, Order.payment_code!=None, Order.pay_time!=None, Order.finished_time!=None).order_by(Order.code.desc()).all()
-    else:
-        abort(make_response(jsonify(errcode=STATUS_NO_ORDER_STATUS, message=MESSAGES[STATUS_NO_ORDER_STATUS]), 400))
+    try:
+        status = int(request.args.get('status'))
+        page = int(request.args.get('page'))
+    except Exception as e:
+        status = 1
+        page = 0
+        pass
 
-    return jsonify([o.to_json() for o in orders])
+    print('request args', request.args)
+    item_each_page = 10
+    now = datetime.now()
+    now = now + timedelta(weeks=-8)
+    orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.openid==mo.openid, Order.mode==0, Order.status==status, Order.order_time>now)
+    orders = orders.order_by(Order.code.desc()).offset(page*item_each_page).limit(item_each_page).all()
+    #if status == 'wait':
+    #    orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.openid==mo.openid, Order.mode==0, Order.payment_code==None, Order.pay_time==None).order_by(Order.code.desc()).all()
+    #elif status == 'paid':
+    #    orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.openid==mo.openid, Order.mode==0, Order.payment_code!=None, Order.pay_time!=None, Order.finished_time==None).order_by(Order.code.desc()).all()
+    #elif status == 'finished':
+    #    orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.openid==mo.openid, Order.mode==0, Order.payment_code!=None, Order.pay_time!=None, Order.finished_time!=None).order_by(Order.code.desc()).all()
+    #else:
+    #    abort(make_response(jsonify(errcode=STATUS_NO_ORDER_STATUS, message=MESSAGES[STATUS_NO_ORDER_STATUS]), 400))
+
+    return jsonify({"item_each_page": item_each_page, "orders": [o.to_json() for o in orders]})
 
 
 class OrderView(UserView):
@@ -86,6 +71,7 @@ class OrderView(UserView):
         mo.nickname = request.json.get('nickname')
         mo.avatarUrl = request.json.get('avatarUrl')
         print('put order user: %s', mo)
+        print('request.json', request.json)
 
         #promotion = Promotion.query.get(data['promotion_id'])
         #if promotion:
@@ -134,6 +120,7 @@ class OrderView(UserView):
         # product info
         order.original_cost = 0
         order.cost = 0
+        order.status = 1
         order.delivery_fee = 0 if request.json.get('delivery_way') == 1 else 1000
         soldouts = []
         for p in request.json.get('products'): # TODO if the products code in data['products') are duplicated, a db error will be occurred
