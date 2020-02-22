@@ -41,9 +41,9 @@ def products():
                                         Product.show_allowed.op('&')(show_type)>0,
                                         Product.promote_begin_time <= now,
                                         Product.promote_end_time >= now,
-                                        Product.stock > 0,
+                                        #Product.stock > 0,
                                         Product.is_deleted==False).order_by(Product.promote_index)
-        if products.count() == 0 and int(request.args.get('promote_type')) == 0x10: # 没有本周推荐，就随机选一些商品
+        if products.count() == 0 and promote_type == 0x10: # 没有本周推荐，就随机选一些商品
             products = Product.query.filter(Product.shoppoint_id==shop.id,
                                         Product.show_allowed.op('&')(show_type)>0,
                                         Product.stock > 0,
@@ -99,7 +99,7 @@ class ProductView(UserView):
         return jsonify(r)
 
     def post(self):
-        shop = Shoppoint.query.filter_by(code=request.header['X-SHOPPOINT']).first_or_404()
+        shop = Shoppoint.query.filter_by(code=request.headers['X-SHOPPOINT']).first_or_404()
         product = Product.query.filter_by(code=request.json.get('code'), is_deleted=False).first()
         if not product:
             product = Product()
@@ -111,11 +111,11 @@ class ProductView(UserView):
         product.member_price = request.json.get('member_price')
         product.promote_price = request.json.get('promote_price')
         product.english_name = request.json.get('english_name')
-        product.show_allowed = 2 # TODO POS allowed is default just now
-        if request.json.get('web_allowed'):
-            product.show_allowed |= 1
-        if request.json.get('promote_allowed'):
-            product.show_allowed |= 4
+        product.show_allowed = 0x07 # TODO POS value 0x02 allowed is default just now
+        #if request.json.get('web_allowed'):
+        #    product.show_allowed |= 1
+        #if request.json.get('promote_allowed'):
+        #    product.show_allowed |= 4
         #product.web_allowed = request.json.get('web_allowed')
         #product.promote_allowed = request.json.get('promote_allowed')
         product.summary =  request.json.get('summary')
@@ -129,7 +129,6 @@ class ProductView(UserView):
         product.category_id = category.id
         product.category = category
 
-        print(data)
         # remove image not needed
         if request.json.get('to_remove_images'):
           for photo in request.json.get('to_remove_images'):

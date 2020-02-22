@@ -5,14 +5,38 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>小麦芬烘焙</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+	<script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+	<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
     <!--link rel="stylesheet" href="{{url_for('static', filename='css/admin.css')}}"-->
-    <script src="http://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
   <style type="text/css">
+	body {
+		padding: 1em;
+	}
+
+	h2.title {
+		margin: .5em 1%;
+		margin-bottom: 10px;
+		margin-left: 1%;
+		font-weight: bold;
+	}
+
+	.form-inline.condition {
+		display: flex;
+	}
+
+	.form-inline.condition .form-group {
+		margin-right: .6em; 
+	}
+
+	.form-inline.condition .form-group label {
+		margin-right: .3em;
+	}
+
     section.orders {
       display: flex;
-      flex-direction: row;
-      flex-wrap: wrap;
+      flex-direction: column;
     }
 
     section.orders .order {
@@ -97,58 +121,101 @@
       align-items: center;
       justify-content: center;
     }
+
+	section.statistics {
+		display: flex;
+		flex-direction: column;
+	}
   </style>
   </head>
   <body>
-    <header>
-      <hgroup>
-      <h2></h2>
-      <h4></h4>
-      </hgroup>
-    </header>
-    <section class="products">
-        <table class="table">
-			<tr>
-				<th scope="col">品种</th>
-				<th scope="col">数量</th>
-			<tr>
-            {%for product in products.values() -%}
-            <tr>
-                <td>{{product.name}}<td>
-                <td>{{product.amount}}</td>
-            <tr>
-            {% endfor %}
-        </table>
-    </section>
-    <section class="orders">
-          {% for order in orders -%}
-      <a class="order" href="/admin/muffins/order/info?code={{order.code}}">
-        <span class="title">{{order.member_openid.nickname}}</span>
-        <div class="products">
-              {%- for p in order.products %}
-              <section class="product">
-              <img src="/media/{{p.product.images[0].image.name}}">
-              <span>{{p.amount}}</span>
-              </section>
-              {%endfor%}
-        </div>
-        <span class="price">￥{{order.cost/100}}{%if order.delivery_fee%}￥{{order.delivery_fee/100}}{%endif%}</span>
-        {%-if order.member_openid.phone%}
-        <span class="member">会员信息: {{order.member_openid.name}}[{{order.member_openid.phone}}]</span>
-        {%-endif%}
-        {%-if order.pay_time and order.payment_code%}
-        <span class="paid">{%if order.payment==2%}储值卡{%else%}微信{%endif%}已支付</span>
-        {%-else%}
-        <span class="not paid">{%if order.payment==2%}储值卡{%else%}微信{%endif%}未支付</span>
-        {%-endif%}
-        <span>{{order.order_time}}</span>
-        <span>{%if order.pay_time%}{{order.pay_time}}{%endif%}</span>
-        <span>{%if order.delivery_way==1%}自提{%else%}快递{%endif%}</span>
-        <span>{%if order.delivery_way==2 %}{{order.address.name}}[{{order.address.phone}}]{{order.address.full_address()}}{%else%}{{order.pickup_address.address}}{%endif%}</span>
-        <span>{{order.note}}</span>
-      </a>
-          {%- endfor %}
-    </section>
+	<!--form class="form-inline condition" action="/admin/muffins/order/list" method="GET">
+		<div class="form-group">
+			<label for="from_date">设定开始日期</label>
+			<input class="form-control" type="date" name='from_date' />
+		</div>
+		<div class="form-group">
+			<label for="from_time">设定开始时间</label>
+			<input class="form-control" type="time" name='from_time' />
+		</div>
+		<div class="form-group">
+			<label for="to_date">设定结束日期</label>
+			<input class="form-control" type="date" name='to_date' />
+		</div>
+		<div class="form-group">
+			<label for="to_time">设定结束时间</label>
+			<input class="form-control" type="time" name='to_time' />
+		</div>
+		<button id="query" type="button" class="btn btn-primary">搜索</button>
+	</form-->
+	<section class="statistics">
+			<h2 class="title">产品总数</h2>
+			<section class="products">
+				<table class="table table-striped table-bordered table-hover">
+					<tr class="thead-light">
+						<th scope="col">品种</th>
+						<th scope="col">数量</th>
+					<tr>
+					{%for product in products.values() -%}
+					<tr>
+						<td>{{product.name}}</td>
+						<td>{{product.amount}}</td>
+					</tr>
+					{% endfor %}
+				</table>
+			</section>
+	</section>
+	<section class="statistics">
+		<h2 class="title">订单</h2>
+		<section class="card-group orders">
+			{%- for order in orders %}
+			<div class="card border-secondary mb-3">
+				<div class="card-header">{{order.member_openid.nickname}}</div>
+				{%- if order.member_openid.name and order.member_openid.phone%}
+				<div class="card-body">
+					<div class="card-text">会员信息: {{order.member_openid.name}}[{{order.member_openid.phone}}]</div>
+				</div>
+				{%-endif%}
+				<ul class="list-group list-group-flush">
+					  {%- for p in order.products %}
+					<li class="list-group-item">{{p.product.name}}x{{p.amount}}</li>
+					  {%endfor%}
+				</ul>
+				<div class="card-body">
+					  <div class="card-text">金额: ￥{{order.cost/100}}{%if order.delivery_fee%}￥{{order.delivery_fee/100}}{%endif%}</div>
+					  <div class="card-text">
+						{%if order.payment==2%}储值卡{%elif order.payment==4%}微信{%endif%}
+						{%-if order.status>=2%}已支付{%-else%}未支付{%-endif%}
+					  </div>
+				</div>
+				<div class="card-body">
+					  <div class="card-text">下单时间: {{order.order_time}}</div>
+					  <div class="card-text">支付时间: {{order.pay_time}}</div>
+				</div>
+				<div class="card-body">
+					  <div class="card-text">{%if order.delivery_way==2 %}{{order.address.name}}[{{order.address.phone}}]{{order.address.full_address()}}{%else%}{{order.pickup_address.address}}{%endif%}-{%if order.delivery_way==1%}自提{%else%}快递{%endif%}</div>
+				</div>
+				<div class="card-body">
+					  <div class="card-text">{{order.note}}</div>
+				</div>
+			</div>
+			{%- endfor %}
+		</section>
+	</section>
   </body>
-</html>
+  <script>
+	$(document).ready(function() {
+		console.log('window ready');
+		$('#query').click(e => {
+			console.log(e);
+			var from_date = $("input[name='from_date']").val()
+			var from_time = $("input[name='from_time']").val()
+			var to_date = $("input[name='to_date']").val()
+			var to_time = $("input[name='to_time']").val()
 
+			$('form').submit()
+			
+		});
+	});
+  </script>
+</html>

@@ -157,7 +157,7 @@ class ProductCategory(BaseModel):
 
 class Product(BaseModel):
     __tablename__ = 'product'
-    _include_column_ = ['id', 'code', 'name', 'price', 'member_price', 'promote_price', 'sold', 'promote_sold', 'stock',
+    _include_column_ = ['id', 'code', 'name', 'price', 'member_price', 'promote_price', 'sold', 'promote_sold', 'stock', 'promote_stock',
                         'promote_type','summary', 'note', 'show_allowed', 'category_id', 'promote_begin_time',
                         'promote_end_time', 'images', 'sizes']
     id = db.Column(db.Integer, primary_key=True)
@@ -312,7 +312,7 @@ class Promotion(BaseModel):
     shoppoint = db.relationship('Shoppoint', backref=db.backref('promotions', lazy="dynamic"))
 
     products = db.relationship('PromotionProduct', back_populates="promotion",
-                               order_by="asc(PromotionProduct.index)")
+                               order_by="asc(PromotionProduct.index)", cascade='save-update, merge, delete')
     orders = db.relationship('Order', back_populates='promotion', order_by="desc(Order.index)")
     #addresses = db.relationship('PromotionAddress', back_populates='promotion')
 

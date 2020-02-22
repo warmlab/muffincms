@@ -1,4 +1,4 @@
-from flask import current_app, json
+from flask import current_app, json, request, abort, jsonify
 
 from urllib.parse import urlencode
 from urllib.request import urlopen
@@ -35,7 +35,7 @@ def _generateQRCode(upload_folder, path, partment, target, user, type):
         image.write(result)
         image.close()
 
-        return {'qr_image_path': user.openid + '/' + str(target.id) + '.jpeg'}
+        return jsonify({'qr_image_path': user.openid + '/' + str(target.id) + '.jpeg'})
 
 @api.route('/qrcode', methods=['POST'])
 @login_required

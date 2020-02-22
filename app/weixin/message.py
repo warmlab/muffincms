@@ -5,6 +5,8 @@ from datetime import datetime
 
 from xml.etree import ElementTree as etree
 
+from ..models import MemberOpenid
+
 class Message():
     def __init__(self):
         #self.message = message
@@ -122,13 +124,13 @@ class Message():
 
     def process_event(self):
         if self.event == 'subscribe':
-            info = get_member_info(openid)
+            #info = get_member_info(openid)
             if 'openid' in info:
-                member = Member.query.filter_by(weixin_openid=info.get('openid'))
+                member = MemberOpenid.query.filter_by(openid=self.get_value('FromUserName'))
                 if member:
-                    member.weixin_unionid = info.get('unionid')
-                    member.gender = info.get('sex')
-                    member.nickname = info.get('nickname')
+                    member.unionid = info.get('unionid')
+                    #member.gender = info.get('sex')
+                    #member.nickname = info.get('nickname')
                     self.member = member
             body = self.generate_response_body()
             response = make_response()
