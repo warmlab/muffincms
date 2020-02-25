@@ -79,6 +79,15 @@ def notify_admins(code, shoppoint_id):
 
 @app.task()
 def notify_customer(order_code, partment_code, shoppoint_id, form_id):
+    for i in range(3):
+        r = do_notify_customer(order_code, partment_code, shoppoint_id, form_id)
+        if r['errcode'] == 43101: # user refuse to accept the msg, try another time
+            from time import sleep
+            sleep(10) # sleep 10 seconds
+        else:
+            break
+
+def do_notify_customer(order_code, partment_code, shoppoint_id, form_id):
     # 获取订单信息
     order = Order.query.get_or_404(order_code)
     # 获取公众号的partment
@@ -130,4 +139,51 @@ def notify_customer(order_code, partment_code, shoppoint_id, form_id):
     print('notify customer', j)
 
     body = json.dumps(j)
-    access_weixin_api('https://api.weixin.qq.com/cgi-bin/message/subscribe/send', body, access_token=partment.get_access_token())
+    r = access_weixin_api('https://api.weixin.qq.com/cgi-bin/message/subscribe/send', body, access_token=partment.get_access_token())
+    print('subscribe send result', r)
+    return r
+    #if r['errcode'] == 43101: # user refuse to accept the msg
+    #    return 1 # to try again
+        # try another way send uniform message
+        # 提醒顾客订单已经付款
+        #weapp_data = {
+        #        "keyword1": {
+        #            "value": order.code
+        #            },
+        #        "keyword2": {
+        #            "value": order.pay_time.strftime('%Y-%m-%d %H:%M:%S') if order.pay_time else ''
+        #            },
+        #        "keyword3":{
+        #            #"value": ' '.join(["x".join([p.product.name, str(p.amount)]) for p in order.products])
+        #            "value": ' '.join(['x'.join([p.product.name + ('' if not p.size else '['+p.size.name+']'), str(p.amount)]) for p in order.products])
+        #            },
+        #        "keyword4":{
+        #            "value": '￥' + str((order.cost+order.delivery_fee)/100)
+        #            },
+        #        "keyword5":{
+        #            "value": "自提" if order.delivery_way == 1 else "快递 -- 运费:￥" + str(order.delivery_fee/100)
+        #            },
+        #        "keyword6":{
+        #            "value": '-'.join([order.address.name, order.address.phone, order.address.address])
+        #            },
+        #        "keyword7":{
+        #            "value": '如有疑问，可以拨打客服电话: 13370836021，服务时间：9:00~19:00'
+        #            },
+        #        "keyword8":{
+        #            "value": order.note
+        #            },
+        #        }
+        #j = {
+        #     'touser': order.openid,
+        #     #'url':  url_for('shop.payresult', _external=True, ticket_code=order.code),
+        #     'weapp_template_msg': {
+        #        'template_id': 'x61QivvlgTGlNGuKDX8lYprf1EbgLw8Vv6MneCHSEmw',
+        #        'form_id': form_id,
+        #        'data': weapp_data,
+        #        'emphasis_keyword': 'keyword4.DATA',
+        #        'page': '/pages/my/order/detail?code=' + order.code
+        #     }
+        # },
+        #print('body', j)
+        #body = json.dumps(j)
+        #access_weixin_api('https://api.weixin.qq.com/cgi-bin/message/wxopen/template/uniform_send', body, access_token=partment.get_access_token())

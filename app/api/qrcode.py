@@ -1,4 +1,4 @@
-from flask import current_app, json
+from flask import current_app, json, request
 
 from urllib.parse import urlencode
 from urllib.request import urlopen

@@ -4,7 +4,7 @@ from flask import request, abort
 from flask import render_template
 
 from .. import admin
-from ...models import Order, Shoppoint
+from ...models import Order, Shoppoint, Promotion
 
 
 @admin.route('/<shopcode>/order/info', methods=['GET'])
@@ -27,8 +27,22 @@ def order_list(shopcode):
   #if id:
       #promotion = Promotion.query.get_or_404(id)
 
-  now = datetime.now()+timedelta(days=-2)
-  orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.pay_time>now).order_by(Order.pay_time)
+
+  #from_date = request.args.get('from_date')
+  #from_time = request.args.get('from_time')
+  #to_date = request.args.get('to_date')
+  #to_time = request.args.get('to_time')
+
+  promotion = Promotion.query.order_by(Promotion.id.desc()).first()
+  promote_time = promotion.publish_time
+
+  #try:
+  #    from_date = datetime.strptime(from_date, '%Y-%m-%d')
+  #except Exception as e:
+  #    from_date = datetime.now() + timedelta(days=-1)
+
+  #now = datetime.now()+timedelta(days=-9)
+  orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.order_time>promote_time).order_by(Order.order_time.asc())
   dic = {}
   for o in orders:
       for p in o.products:

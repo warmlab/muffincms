@@ -124,7 +124,10 @@ class OrderView(UserView):
         order.delivery_fee = 0 if request.json.get('delivery_way') == 1 else 1000
         soldouts = []
         for p in request.json.get('products'): # TODO if the products code in data['products') are duplicated, a db error will be occurred
-            product = Product.query.get_or_404(p['id']) # filter_by(code=p['code']).first_or_404()
+            product = Product.query.get(p['id']) # filter_by(code=p['code']).first_or_404()
+            if not product:
+                db.session.rollback()
+                abort(make_response(jsonify(errcode=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE], data=p), 404))
             if product.stock < p['want_amount']:
                 soldouts.append(product.to_json())
                 continue
