@@ -142,7 +142,12 @@ class OpenidAddressView(UserView):
     def get(self):
         shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
         mo = MemberOpenid.query.filter_by(shoppoint_id=shop.id, access_token=request.headers.get('X-ACCESS-TOKEN')).first_or_404()
-        address = MemberOpenidAddress.query.get_or_404(request.args.get('id'))
+
+        try:
+            address_id = int(request.args.get('id'))
+        except Exception as e:
+            address_id = 0
+        address = MemberOpenidAddress.query.get_or_404(address_id)
         if address.openid != mo.openid:
             abort(make_response(jsonify(errcode=STATUS_NO_RESOURCE, message=MESSAGES[STATUS_NO_RESOURCE]), 404))
         return jsonify(address.to_json())
@@ -151,8 +156,13 @@ class OpenidAddressView(UserView):
         shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
         mo = MemberOpenid.query.filter_by(shoppoint_id=shop.id, access_token=request.headers.get('X-ACCESS-TOKEN')).first_or_404()
 
-        if request.json.get('id'):
-            address = MemberOpenidAddress.query.get_or_404(request.json.get('id'))
+        try:
+            address_id = int(request.args.get('id'))
+        except Exception as e:
+            address_id = 0
+
+        if address_id:
+            address = MemberOpenidAddress.query.get_or_404(address_id)
         else:
             address = MemberOpenidAddress()
         address.contact = request.json.get('contact')

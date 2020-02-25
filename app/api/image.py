@@ -55,6 +55,11 @@ class ImageView(UserView):
     def post(self):
         shop = Shoppoint.query.filter_by(code=request.headers['X-SHOPPOINT']).first_or_404()
 
+        try:
+            image_type = int(request.values.get('type'))
+        except Exception as e:
+            print('image type is invalid, set it to default value 2')
+            image_type = 2
         upload_file = request.files.get('upload-files')
 
         hash_value = self.generate_hash_value(upload_file)
@@ -85,7 +90,7 @@ class ImageView(UserView):
 
         image.title = request.values.get('title')
         image.note = request.values.get('note')
-        image.type = image.type | int(request.values.get('type'))
+        image.type = image.type | image_type
 
         db.session.commit()
         return jsonify(image.to_json()), 201

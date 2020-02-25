@@ -49,7 +49,11 @@ def promotion_products():
 @login_required
 def promotion_orders():
     shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
-    orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.promotion_id==request.args.get('id'), Order.index>0).order_by(Order.index.desc()).all()
+    try:
+        promotion_id = int(request.args.get('id'))
+    except Exception as e:
+        promotion_id = 0
+    orders = Order.query.filter(Order.shoppoint_id==shop.id, Order.promotion_id==promotion_id, Order.index>0).order_by(Order.index.desc()).all()
 
     return jsonify([o.to_json() for o in orders])
 
@@ -62,7 +66,13 @@ class PromotionView(UserView):
             abort(make_response(jsonify(errcode=STATUS_NO_REQUIRED_ARGS, message=MESSAGES[STATUS_NO_REQUIRED_ARGS] % 'promotion id'), 400))
 
         shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
-        promotion = Promotion.query.get(request.args.get('id'))
+
+        try:
+            promotion_id = int(request.args.get('id'))
+        except Exception as e:
+            promotion_id = 0
+
+        promotion = Promotion.query.get(promotion_id)
         if promotion and promotion.shoppoint_id == shop.id and not promotion.is_deleted:
             return jsonify(promotion.to_json())
         else:
@@ -72,8 +82,13 @@ class PromotionView(UserView):
     def post(self):
         shop = Shoppoint.query.filter_by(code=request.headers.get('X-SHOPPOINT')).first_or_404()
 
+        print('request.json', request.json)
         if request.json.get('id'):
-            promotion = Promotion.query.get(request.json.get('id'))
+            try:
+                promotion_id = int(request.json.get('id'))
+            except Exception as e:
+                promotion_id = 0
+            promotion = Promotion.query.get(promotion_id)
             if not promotion:
                 promotion = Promotion()
                 db.session.add(promotion)

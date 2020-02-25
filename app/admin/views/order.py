@@ -27,7 +27,6 @@ def order_list(shopcode):
   #if id:
       #promotion = Promotion.query.get_or_404(id)
 
-
   #from_date = request.args.get('from_date')
   #from_time = request.args.get('from_time')
   #to_date = request.args.get('to_date')
