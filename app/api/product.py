@@ -46,7 +46,7 @@ def products():
         if products.count() == 0 and promote_type == 0x10: # 没有本周推荐，就随机选一些商品
             products = Product.query.filter(Product.shoppoint_id==shop.id,
                                         Product.show_allowed.op('&')(show_type)>0,
-                                        Product.stock > 0,
+                                        Product.stock>0,
                                         Product.is_deleted==False).order_by(Product.promote_index)
     elif 'category' in request.args:
         category = ProductCategory.query.get_or_404(request.args.get('category'))

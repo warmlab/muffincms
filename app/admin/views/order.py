@@ -33,7 +33,7 @@ def order_list(shopcode):
   #to_time = request.args.get('to_time')
 
   promotion = Promotion.query.order_by(Promotion.id.desc()).first()
-  promote_time = promotion.publish_time
+  promote_time = promotion.from_time
 
   #try:
   #    from_date = datetime.strptime(from_date, '%Y-%m-%d')
@@ -46,9 +46,10 @@ def order_list(shopcode):
   for o in orders:
       for p in o.products:
           if p.product_id in dic:
-              dic[p.product_id].amount += p.amount
+              if o.pay_time:
+                  dic[p.product_id].amount += p.amount
           else:
               p.product.amount = p.amount
               dic[p.product_id] = p.product
 
-  return render_template('admin/order/list.html', orders=orders, products=dic)
+  return render_template('admin/order/list.html', promote_time=promote_time, orders=orders, products=dic)

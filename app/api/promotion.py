@@ -104,7 +104,7 @@ class PromotionView(UserView):
         #promotion.delivery_way = request.json.get('delivery_way')
         #promotion.delivery_fee = 0 if promotion.delivery_way == 1 else request.json.get('delivery_fee')
         #promotion.last_order_time = datetime.strptime(' '.join([request.json.get('last_order_date'], data['last_order_time'])), '%Y-%m-%d %H:%M')
-        promotion.type = int(request.json.get('promote_type'))
+        promotion.type = request.json.get('promote_type')
         promotion.from_time = datetime.strptime(' '.join([request.json.get('from_date'), request.json.get('from_time')]), '%Y-%m-%d %H:%M')
         promotion.to_time = datetime.strptime(' '.join([request.json.get('to_date'), request.json.get('to_time')]), '%Y-%m-%d %H:%M')
         promotion.shoppoint_id = shop.id
@@ -123,19 +123,24 @@ class PromotionView(UserView):
         if request.json.get('to_remove'):
           for p in request.json.get('to_remove'):
             product = Product.query.get_or_404(p['id'])
-            product.promote_type = product.promote_type & ~promotion.type
+            if product.promote_type is None:
+                product.promote_type = 0
+            else:
+                product.promote_type = product.promote_type & ~promotion.type
             if promotion.type == 4: # 特价
                 product.promote_begin_time = None
                 product.promote_end_time = None
             pp = PromotionProduct.query.filter_by(promotion_id=promotion.id, product_id=product.id).first()
             if pp:
               pp.is_deleted = True
+              db.session.delete(pp)
         for index, p in enumerate(request.json.get('products')):
             product = Product.query.get_or_404(p['id'])
             if not product.promote_type:
                 product.promote_type = request.json.get('promote_type')
             else:
                 product.promote_type |= request.json.get('promote_type')
+            #if promotion.type == 4: # 特价
             product.promote_begin_time = datetime.strptime(' '.join([request.json.get('from_date'), request.json.get('from_time')]), '%Y-%m-%d %H:%M')
             product.promote_end_time = datetime.strptime(' '.join([request.json.get('to_date'), request.json.get('to_time')]), '%Y-%m-%d %H:%M')
             if product.category and product.category.extra_info and product.category.extra_info & 1 == 1:
