@@ -136,7 +136,7 @@ class OrderView(UserView):
             if p['want_size'] > 0:
                 size = Size.query.get_or_404(p['want_size'])
                 op.size = size
-            print('the product in order: %s', product)
+            print('the product in order: ', product)
             op.order = order
             op.product = product
             op.amount = p['want_amount']

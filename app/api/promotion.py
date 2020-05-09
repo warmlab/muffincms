@@ -170,13 +170,16 @@ class PromotionView(UserView):
             #if p['price']:
             #    pp.price = p['price']
             #else:
-            pp.price = product.promote_price + (size.promote_price_plus if p['size'] else 0)
-            if p['stock']:
-                pp.stock = p['stock']
-                product.stock = p['stock']
-            else:
-                product.promote_stock = p['stock']
-                pp.stock = product.promote_stock
+            #pp.price = product.promote_price + (size.promote_price_plus if p['size'] else 0)
+            pp.price = product.price
+            #if p['stock']:
+            #    pp.stock = p['stock']
+            #    product.stock = p['stock']
+            #else:
+            #product.promote_stock = p['stock']
+            #pp.stock = product.stock
+            pp.stock = p['stock']
+            product.stock = p['stock']
 
         #promotion.addresses = []
         #to_delete_addresses = [pa.address_id for pa in promotion.addresses]

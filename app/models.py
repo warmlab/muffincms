@@ -534,7 +534,16 @@ class OrderAddress(BaseModel):
     order = db.relationship("Order", back_populates="address")
 
     def full_address(self):
-        return self.province + self.city + self.district + self.address
+        full_addr = ''
+        if self.province is not None:
+            full_addr += self.province
+        if self.city is not None:
+            full_addr += self.city
+        if self.district is not None:
+            full_addr += self.district
+        if self.address is not None:
+            full_addr += self.address
+        return full_addr
 
 class Staff(BaseModel):
     __tablename__ = 'staff'
