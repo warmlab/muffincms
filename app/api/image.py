@@ -81,12 +81,23 @@ class ImageView(UserView):
             upload_file.save(original_file) # original file
             if int(request.values.get('type')) != 4:
                 im = PLImage.open(original_file)
-                im.thumbnail((200,200))
+                im.thumbnail((300,300))
                 im.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename), 'JPEG')
             else:
                 im = PLImage.open(original_file)
                 im.thumbnail((750,330))
                 im.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename), 'JPEG')
+        else:
+            print('to update thumbnail image for image', image.name)
+            original_file = os.path.join(current_app.config['UPLOAD_FOLDER'], 'full', image.name)
+            if int(request.values.get('type')) != 4:
+                im = PLImage.open(original_file)
+                im.thumbnail((300,300))
+                im.save(os.path.join(current_app.config['UPLOAD_FOLDER'], image.name), 'JPEG')
+            else:
+                im = PLImage.open(original_file)
+                im.thumbnail((750,330))
+                im.save(os.path.join(current_app.config['UPLOAD_FOLDER'], image.name), 'JPEG')
 
         image.title = request.values.get('title')
         image.note = request.values.get('note')

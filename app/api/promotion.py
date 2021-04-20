@@ -123,6 +123,8 @@ class PromotionView(UserView):
         if request.json.get('to_remove'):
           for p in request.json.get('to_remove'):
             product = Product.query.get_or_404(p['id'])
+            product.stock = 0 # set stock to 0 if it was removed from the promotion list
+            product.promote_stock = 0 # set promote stock to 0 if it was removed from the promotion list
             if product.promote_type is None:
                 product.promote_type = 0
             else:
