@@ -6,16 +6,19 @@ from urllib.parse import urlencode
 from urllib.request import urlopen
 from urllib.request import Request as UrlRequest
 
-from flask import request, current_app, json, jsonify, abort, make_response
+from flask import request, json, jsonify, abort, make_response
 
 from ..status import STATUS_NO_REQUIRED_ARGS, STATUS_NO_RESOURCE, STATUS_CANNOT_DECRYPT, STATUS_TOKEN_INVALID, MESSAGES
 
 from ..models import db
-from ..models import MemberOpenid, Shoppoint, Partment, MemberOpenidAddress
+from ..models import MemberOpenid, Member, Shoppoint, Partment, MemberOpenidAddress
 
 from . import api
 from .base import UserView, login_required
 
+# just for macOS
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
 
 @api.route('/login', methods=['POST'])
 def login():

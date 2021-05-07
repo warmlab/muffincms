@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from uuid import uuid4
 from urllib.parse import urlencode
 from urllib.request import urlopen
@@ -160,11 +160,18 @@ class OrderView(UserView):
             #        order.original_cost += op.amount * product.price
             #else:
             pp = None
-            if p['want_size']:
-                ps = ProductSize.query.get_or_404((product.id, size.id))
-                op.price = product.price + ps.price_plus
+            now = datetime.now()
+            if product.promote_type & 0x04 == 0x04 and \
+               product.promote_begin_time < now and \
+               product.promote_end_time > now:
+                op.price = product.promote_price
             else:
                 op.price = product.price
+            if p['want_size']:
+                ps = ProductSize.query.get_or_404((product.id, size.id))
+                op.price = op.price + ps.price_plus
+            else:
+                op.price = op.price
             order.original_cost += op.amount * op.price
 
             #pp.sold += op.amount

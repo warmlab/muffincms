@@ -21,6 +21,7 @@ def category_list():
 
     return jsonify([c.to_json() for c in categories])
 
+
 @api.route('/products', methods=['GET'])
 @login_required
 def products():
@@ -41,7 +42,7 @@ def products():
                                         Product.show_allowed.op('&')(show_type)>0,
                                         Product.promote_begin_time <= now,
                                         Product.promote_end_time >= now,
-                                        #Product.stock > 0,
+                                        Product.stock > 0,
                                         Product.is_deleted==False).order_by(Product.promote_index, Product.category_id)
         if products.count() == 0 and promote_type == 0x10: # 没有本周推荐，就随机选一些商品
             products = Product.query.filter(Product.shoppoint_id==shop.id,
