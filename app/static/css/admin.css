@@ -75,6 +75,9 @@ body {
 
 .order .products .product .info .amount {
   margin-right: .5em;
+  background-color: #fbfbfb;
+  border-radius: 50%;
+  padding: .5em;
 }
 
 .order img {

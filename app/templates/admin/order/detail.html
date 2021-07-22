@@ -48,6 +48,10 @@
       </section>
     </section>
     <section class="order">
+      <span class="title">订单金额</span>
+	  <span class="content">{{order.cost/100}}元</span>
+    </section>
+    <section class="order">
       <span class="title">取货方式</span>
       <span class="content">{%if order.delivery_way==1%}自提{%else%}快递{%endif%}</span>
     </section>
