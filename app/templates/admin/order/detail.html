@@ -88,7 +88,7 @@
     </section>
     <section class="order">
       <span class="title">状态</span>
-      <span class="content">{{order.status}}</span>
+      <span class="content">{%if order.status== 1%}待付款{%else%}已付款{%endif%}</span>
     </section>
 	{%-if order.promotion %}
 	<section class="list">
