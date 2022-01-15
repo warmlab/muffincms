@@ -20,6 +20,8 @@ from ..models import PromotionProduct, MemberOpenidAddress, PickupAddress, Produ
 from . import api
 from .base import UserView, login_required
 
+from server import notify_admins
+
 
 @api.route('/orders', methods=['GET'])
 @login_required
@@ -70,8 +72,8 @@ class OrderView(UserView):
         mo = MemberOpenid.query.filter_by(access_token=request.headers.get('X-ACCESS-TOKEN')).first_or_404()
         mo.nickname = request.json.get('nickname')
         mo.avatarUrl = request.json.get('avatarUrl')
-        print('put order user: %s', mo)
-        print('request.json', request.json)
+        print('put order user: ', mo)
+        print('request.json: ', request.json)
 
         #promotion = Promotion.query.get(data['promotion_id'])
         #if promotion:
@@ -211,6 +213,7 @@ class OrderView(UserView):
         db.session.add(order)
         db.session.commit()
 
+        notify_admins.apply_async((order.code, shop.id), countdown=120) # wait 2 minites to notify admins
         return jsonify(order.to_json())
 
 api.add_url_rule('/order', view_func=OrderView.as_view('order'))

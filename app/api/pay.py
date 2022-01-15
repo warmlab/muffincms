@@ -51,7 +51,7 @@ def pay():
             order.next_index()
             order.payment_code = order.code
             order.pay_time = datetime.now()
-            order.status = 2 # paied
+            order.status = 2 # paid
             order.commit_amount()
             db.session.commit()
             notify_admins.delay(order.code, shop.id)
@@ -73,7 +73,7 @@ def pay():
                 #        order.address.phone = order.member_openid.phone
 
         # to generate parameters for wx.requestPayment
-        print(order.code, order.prepay_id)
+        print("The order was paid by[", order.openid, "], and order info: ", order.code, order.prepay_id)
         payment_info = {
             'appId': partment.appid,
             'timeStamp': str(int(time())),

@@ -1,3 +1,4 @@
+from datetime import datetime
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
@@ -25,6 +26,10 @@ def notify_admins(code, shoppoint_id):
     shoppoint = Shoppoint.query.get_or_404(shoppoint_id)
     # 获取订单信息
     order = Order.query.get_or_404(code)
+    # 以通知过，不需要再通知
+    if order.notify_time is not None:
+        return
+
     # 获取公众号的partment
     web = Partment.query.filter_by(shoppoint_id=shoppoint_id, code='web').first()
     if not web:
@@ -53,7 +58,7 @@ def notify_admins(code, shoppoint_id):
                 "value": order.member_openid.nickname
                 },
             "keyword4":{
-                "value": '储值卡支付' if order.payment == 2 else "微信已支付" if order.pay_time and order.payment_code else "微信未支付"
+                "value": '储值卡支付' if order.payment == 2 else "微信已支付" if order.pay_time and order.payment_code else "未支付"
                 },
             "keyword5":{
                 "value": order.note
@@ -64,6 +69,7 @@ def notify_admins(code, shoppoint_id):
             }
 
     staffs = Staff.query.filter(Staff.shoppoint_id==shoppoint_id, Staff.privilege.op('&')(1)==1).all()
+    #if order.pay_time and order.payment_code:
     for staff in staffs:
         j = {
             'template_id': 'pkl-0GTnDHxthXtR381PPNAooBT1JwUYuuP-YK1nRSA',
@@ -73,8 +79,19 @@ def notify_admins(code, shoppoint_id):
             }
         body = json.dumps(j)
         result = access_weixin_api('https://api.weixin.qq.com/cgi-bin/message/template/send', body, access_token=web.get_access_token())
+    #else:
+    #    j = {
+    #        'template_id': 'pkl-0GTnDHxthXtR381PPNAooBT1JwUYuuP-YK1nRSA',
+    #        'touser': 'ox4bxso53hocK9iyC-eKNll-qRoI',
+    #        'data': data,
+    #        'url': url
+    #        }
+    #    body = json.dumps(j)
+    #    result = access_weixin_api('https://api.weixin.qq.com/cgi-bin/message/template/send', body, access_token=web.get_access_token())
 
         print('notify admin result: ', result)
+    order.notify_time = datetime.now()
+    #order.save
 
 
 @app.task()

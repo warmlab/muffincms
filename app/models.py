@@ -421,7 +421,8 @@ class Order(BaseModel):
     delivery_time = db.Column(db.DateTime, default=datetime.now) # 交付时间
     finished_time = db.Column(db.DateTime) # 收货时间
 
-    status = db.Column(db.Integer, default=1) # 1-待付款 2-已付款-待取货 4-已快递 8-已完成
+    notify_time = db.Column(db.DateTime, default=None) # 通知管理员时间
+    status = db.Column(db.Integer, default=1) # 1-待付款 2-已付款-待取货 4-已快递 8-已完成 16-已通知管理员 32-已通知用户
     note = db.Column(db.Text)
 
     member_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=True) # 会员消费
