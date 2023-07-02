@@ -125,13 +125,13 @@ class Message():
     def process_event(self):
         if self.event == 'subscribe':
             #info = get_member_info(openid)
-            if 'openid' in info:
-                member = MemberOpenid.query.filter_by(openid=self.get_value('FromUserName'))
-                if member:
-                    member.unionid = info.get('unionid')
-                    #member.gender = info.get('sex')
-                    #member.nickname = info.get('nickname')
-                    self.member = member
+            #if 'openid' in info:
+            member = MemberOpenid.query.filter_by(openid=self.get_value('FromUserName'))
+            if member:
+                member.unionid = self.get_value('unionid')
+                #member.gender = info.get('sex')
+                #member.nickname = info.get('nickname')
+                self.member = member
             body = self.generate_response_body()
             response = make_response()
             response.headers['Content-type'] = 'application/xml'
