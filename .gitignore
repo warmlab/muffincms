@@ -98,6 +98,9 @@ migrations/
 # Rope project settings
 .ropeproject
 
+# macOS files
+.DS_Store
+
 # mkdocs documentation
 /site
 

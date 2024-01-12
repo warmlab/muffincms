@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>小麦芬烘焙</title>
+    <link rel="stylesheet" href="http://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{url_for('static', filename='admin.css')}}">
+    <script src="http://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+  </head>
+  <body>
+    <section class="member">
+      <img src="{{member.avatarUrl}}"/>
+      <span>{{member.nickname}}</span>
+    </section>
+    <section class="order">
+      <h1>{{order.code}}</h1>
+      {% for p in order.products %}
+      <img src="{{url_for('media', filename=p.product.images[0].image.name)}}">
+      <p>{{p.product.name}}x{{p.amount}}</p>
+      {% endfor %}
+    </section>
+  </body>
+</html>
